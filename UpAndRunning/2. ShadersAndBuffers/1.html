@@ -1,0 +1,32 @@
+<body></body>
+<script type="x-shader/x-vertex" id="x-vertex">
+    attribute vec2 coordinates;
+    void main(void) {
+       gl_Position = vec4(coordinates,0.0, 1.0);
+    }
+</script>
+<script type="x-shader/x-fragment" id="x-fragment">
+    void main(void) {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    }
+</script>
+<script type="text/javascript">
+    var canvas  = document.createElement("canvas");
+    var gl      = canvas.getContext("webgl");
+
+    var vertShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertShader, document.getElementById("x-vertex").text);
+    gl.compileShader(vertShader);
+
+    var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragShader, document.getElementById("x-fragment").text);
+    gl.compileShader(fragShader);
+
+    var shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertShader);
+    gl.attachShader(shaderProgram, fragShader);
+    gl.linkProgram(shaderProgram);
+    gl.useProgram(shaderProgram);
+
+    document.body.appendChild(canvas);
+</script>
