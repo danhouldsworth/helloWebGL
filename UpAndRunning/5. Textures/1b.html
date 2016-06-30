@@ -39,27 +39,24 @@
 
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        -0.5,    +0.5,    0.0,
-        -0.5,    -0.5,    0.0,
-        +0.5,    -0.5,    0.0,
-        +0.5,    -0.5,    0.0,
-        +0.5,    +0.5,    0.0,
-        -0.5,    +0.5,    0.0
+        -0.5,    -0.5,    0.0,  // BL
+        +0.5,    -0.5,    0.0,  // BR
+        -0.5,    +0.5,    0.0,  // TL
+        +0.5,    +0.5,    0.0   // TR
     ]), gl.STATIC_DRAW);
     gl.vertexAttribPointer(     gl.getAttribLocation(shaderProgram, "a_coordinates"), 3, gl.FLOAT, false, 0, 0);    // uses most recently binded ARRAY_BUFFER (ie vertex coords)
     gl.enableVertexAttribArray( gl.getAttribLocation(shaderProgram, "a_coordinates"));
 
     var image = new Image();
-    image.src = "logo.png";  // MUST BE SAME DOMAIN!!!
+    image.src = "logo.png";
     image.onload = function() {
         gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-          0.0,  0.0,
-          0.0,  1.0,
-          1.0,  1.0,
-          1.0,  1.0,
-          1.0,  0.0,
-          0.0,  0.0]), gl.STATIC_DRAW);
+          0.0,  1.0,    // BL
+          1.0,  1.0,    // BR
+          0.0,  0.0,    // TL
+          1.0,  0.0     // TR
+        ]), gl.STATIC_DRAW);
         gl.enableVertexAttribArray(   gl.getAttribLocation(shaderProgram, "a_texCoord"));
         gl.vertexAttribPointer(       gl.getAttribLocation(shaderProgram, "a_texCoord"), 2, gl.FLOAT, false, 0, 0);
 
@@ -72,10 +69,9 @@
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array([
-            0,1,2,3,4,5,6
+            0,1,2,3
         ]), gl.STATIC_DRAW);
-        gl.drawElements(gl.TRIANGLES,  6, gl.UNSIGNED_BYTE, 0);                    // void drawElements(enum mode, long count, enum type, long offset)
+        gl.drawElements(gl.TRIANGLE_STRIP,  4, gl.UNSIGNED_BYTE, 0);                    // void drawElements(enum mode, long count, enum type, long offset)
         document.body.appendChild(canvas);
-
     }
 </script>
