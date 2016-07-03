@@ -1,0 +1,51 @@
+<body></body>
+<script type="x-shader/x-vertex" id="x-vertex">
+    attribute   float   a_label;
+    varying     vec2    v_bilerpOutput;
+    void main(void) {
+        float x,y,i,j;
+        if      (a_label == 1.0)    {x = -1.0;  y = -1.0; i = -1.5; j = -1.5;}
+        else if (a_label == 2.0)    {x = -1.0;  y = +1.0; i = -1.5; j = +1.5;}
+        else if (a_label == 3.0)    {x = +1.0;  y = -1.0; i = +1.5; j = -1.5;}
+        else if (a_label == 4.0)    {x = +1.0;  y = +1.0; i = +1.5; j = +1.5;}
+        v_bilerpOutput  = vec2(i, j);
+        gl_Position     = vec4(x, y, 0.0,1.0);
+    }
+</script>
+<script type="x-shader/x-fragment" id="x-fragment">
+    precision   highp   float;
+    varying     vec2    v_bilerpOutput;
+    void main(void) {
+        vec2    c = v_bilerpOutput;
+        vec2    z = c;
+        float   inSet = (dot(z, z) < 0.5) ? 1.0 : 0.0;
+
+        gl_FragColor = vec4(z, c.y, inSet);
+    }
+</script>
+<script type="text/javascript">
+    var canvas  = document.createElement("canvas");
+    canvas.width = canvas.height = 2000;
+    document.body.appendChild(canvas);
+    var gl      = canvas.getContext("webgl");
+
+    var vertShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertShader, document.getElementById("x-vertex").text);
+    gl.compileShader(vertShader);
+
+    var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragShader, document.getElementById("x-fragment").text);
+    gl.compileShader(fragShader);
+
+    var shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertShader);
+    gl.attachShader(shaderProgram, fragShader);
+    gl.linkProgram(shaderProgram);
+    gl.useProgram(shaderProgram);
+    var uniqueButMeaninglessLabels = new Float32Array([1,2,3,4]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, uniqueButMeaninglessLabels, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(     gl.getAttribLocation(shaderProgram, "a_label"), 1, gl.FLOAT, false, 0, 0);   // 'Vertex' attributes of size 1
+    gl.enableVertexAttribArray( gl.getAttribLocation(shaderProgram, "a_label"));
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, uniqueButMeaninglessLabels.length);
+</script>

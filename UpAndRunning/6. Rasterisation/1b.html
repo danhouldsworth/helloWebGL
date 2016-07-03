@@ -1,0 +1,48 @@
+<body></body>
+<script type="x-shader/x-vertex" id="x-vertex">
+    attribute   float   a_label;
+    varying     vec4    v_vertexShaderColour;
+    const       vec2 dummy = vec2(0.0, 1.0);
+    void main(void) {
+        float x,y;
+        if      (a_label == 1.0)    {x = -1.0;  y = -1.0;}
+        else if (a_label == 2.0)    {x = -1.0;  y = +1.0;}
+        else if (a_label == 3.0)    {x = +1.0;  y = -1.0;}
+        else if (a_label == 4.0)    {x = +1.0;  y = +1.0;}
+        v_vertexShaderColour    = vec4(dummy, dummy);
+        gl_Position             = vec4(x,   y,dummy);
+    }
+</script>
+<script type="x-shader/x-fragment" id="x-fragment">
+    precision   mediump float;
+    varying     vec4    v_vertexShaderColour;
+    void main(void) {
+        gl_FragColor = v_vertexShaderColour;
+    }
+</script>
+<script type="text/javascript">
+    var canvas  = document.createElement("canvas");
+    canvas.width = canvas.height = 1000;
+    document.body.appendChild(canvas);
+    var gl      = canvas.getContext("webgl");
+
+    var vertShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertShader, document.getElementById("x-vertex").text);
+    gl.compileShader(vertShader);
+
+    var fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragShader, document.getElementById("x-fragment").text);
+    gl.compileShader(fragShader);
+
+    var shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertShader);
+    gl.attachShader(shaderProgram, fragShader);
+    gl.linkProgram(shaderProgram);
+    gl.useProgram(shaderProgram);
+    var meaninglessLabels = new Float32Array([1,2,3,4]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, meaninglessLabels, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "a_label"), 1, gl.FLOAT, false, 0, 0);   // 'Vertex' attributes of size 1
+    gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "a_label"));
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, meaninglessLabels.length);                                           // 3 'vertex' attributes
+</script>
