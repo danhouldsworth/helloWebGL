@@ -18,7 +18,7 @@
 <script type="x-shader" id="x-fragment">
     precision   highp float;
     uniform     float   u_time;
-    uniform     vec2    u_singularities[8];
+    uniform     vec2    u_singularities[9];
     varying     vec2    v_bilerpOutput;
     #define R               vec2(1.0, 0.0)
     #define I               vec2(0.0, 1.0)
@@ -116,21 +116,21 @@
     var ticks = 0.0;
     var u_viewScale = 18;
 
-    var singularities = [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]];
+    var singularities = [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]];
     var canvas  = document.createElement("canvas");
     canvas.width = canvas.height = 1024;
     var userEvent = function(e) {
         e.preventDefault();
-        if (!e.changedTouches || e.changedTouches.length === 0) {
+        if (!e.touches || e.touches.length === 0) {
             singularities[0]=[
                 u_viewScale * ((e.clientX - canvas.getBoundingClientRect().left) / (0.5*canvas.width) - 1.0),
                 u_viewScale * (0.0 - ((e.clientY - canvas.getBoundingClientRect().top ) / (0.5*canvas.width) - 1.0))
             ];
         } else {
-            for (var i = 0; i < e.changedTouches.length; i++){
+            for (var i = 0; (i < e.touches.length) && (i < singularities.length); i++){
                 singularities[i]=[
-                    u_viewScale * ((e.changedTouches[i].clientX - canvas.getBoundingClientRect().left) / (0.5*canvas.width) - 1.0),
-                    u_viewScale * (0.0 - ((e.changedTouches[i].clientY - canvas.getBoundingClientRect().top ) / (0.5*canvas.width) - 1.0))
+                    u_viewScale * ((e.touches[i].clientX - canvas.getBoundingClientRect().left) / (0.5*canvas.width) - 1.0),
+                    u_viewScale * (0.0 - ((e.touches[i].clientY - canvas.getBoundingClientRect().top ) / (0.5*canvas.width) - 1.0))
                 ];
             }
         }
@@ -171,6 +171,7 @@
         gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[5]"), singularities[5]);
         gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[6]"), singularities[6]);
         gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[7]"), singularities[7]);
+        gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[8]"), singularities[8]);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, uniqueButMeaninglessLabels.length);
         window.requestAnimationFrame(animate);
     };
