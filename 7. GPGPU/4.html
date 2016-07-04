@@ -38,14 +38,15 @@
             }
         }
         float k = (modulus - bandStart) / (bandEnd - bandStart);    // Proportion through band
-        k = (k < 0.5) ? (2.0 * k) : (1.0 - 2.0*(k-0.5));            // Take Saturation as rise and fall /\/\/\/\/\/\ and not saw tooth  /|/|/|/|
+        k = (k < 0.5) ? (2.0 * k) : (1.0 - 2.0 * (k - 0.5));        // Take Saturation as rise and fall /\/\/\/\/\/\ and not saw tooth  /|/|/|/|
         float sat = k;          // 0->1->0
         float val = 1.0 - k;    // 1->0->1 ie 1/2 out of phase
 
         vec3 HSVcolor;
         HSVcolor[0] = acos(dot(z, R) / length(z)) / PI;              // Hue [0:1]
         HSVcolor[1] = 1.0 - sat*sat*sat*sat*sat*sat*sat;             // Saturation           (Smoother topped hills / steeper vallies)
-        HSVcolor[2] = 1.0 - val*val*val*val*val*val*val;             // Value (brightness)   (Smoother topped hills / steeper vallies)
+        // HSVcolor[2] = 1.0 - val*val*val*val*val*val*val;             // Value (brightness)   (Smoother topped hills / steeper vallies)
+        HSVcolor[2] = 0.5;             // Value (brightness)   (Smoother topped hills / steeper vallies)
         return HSVcolor;
     }
     vec4 mapHSVtoRGB(vec3 HSVcolor) {
