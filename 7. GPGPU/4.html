@@ -102,10 +102,14 @@
     var mouseY = 0;
     var canvas  = document.createElement("canvas");
     canvas.width = canvas.height = 2048;
-    canvas.addEventListener("mousemove", function(e) {
-        mouseX = (e.clientX - canvas.getBoundingClientRect().left) / (0.5*canvas.width) - 1.0;
-        mouseY = (e.clientY - canvas.getBoundingClientRect().top ) / (0.5*canvas.width) - 1.0;
-    });
+    var userEvent = function(e) {
+        mouseX = ((e.clientX || e.changedTouches[0].clientX) - canvas.getBoundingClientRect().left) / (0.5*canvas.width) - 1.0;
+        mouseY = ((e.clientY || e.changedTouches[0].clientY) - canvas.getBoundingClientRect().top ) / (0.5*canvas.width) - 1.0;
+    };
+    canvas.addEventListener("mousemove", userEvent);
+    canvas.addEventListener("mousedown", userEvent);
+    canvas.addEventListener("touchstart", userEvent);
+    canvas.addEventListener("touchmove", userEvent);
     document.body.appendChild(canvas);
 
     var gl      = canvas.getContext("webgl");
