@@ -40,7 +40,7 @@
         float k = (modulus - bandStart) / (bandEnd - bandStart);    // Proportion through band
         k = (k < 0.5) ? (2.0 * k) : (1.0 - 2.0 * (k - 0.5));        // Take Saturation as rise and fall /\/\/\/\/\/\ and not saw tooth  /|/|/|/|
         if (k<0.0) k=0.0;
-
+        if (k>1.0) k=1.0;
         float sat = k;          // 0->1->0
         float val = 1.0 - k;    // 1->0->1 ie 1/2 out of phase
 
