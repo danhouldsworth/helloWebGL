@@ -48,8 +48,8 @@
         HSVcolor[0] = acos(dot(z, R) / length(z)) / PI;              // Hue [0:1]
         // HSVcolor[1] = 1.0 - sat*sat*sat*sat*sat*sat*sat;             // Saturation           (Smoother topped hills / steeper vallies)
         HSVcolor[1] = 0.5;             // Saturation           (Smoother topped hills / steeper vallies)
-        // HSVcolor[2] = 1.0 - val*val*val*val*val*val*val;             // Value (brightness)   (Smoother topped hills / steeper vallies)
-        HSVcolor[2] = 0.5;             // Value (brightness)   (Smoother topped hills / steeper vallies)
+        HSVcolor[2] = 1.0 - val*val*val*val*val*val*val;             // Value (brightness)   (Smoother topped hills / steeper vallies)
+        // HSVcolor[2] = 0.5;             // Value (brightness)   (Smoother topped hills / steeper vallies)
         return HSVcolor;
     }
     vec4 mapHSVtoRGB(vec3 HSVcolor) {
