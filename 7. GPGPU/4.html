@@ -18,11 +18,14 @@
 <script type="x-shader" id="x-fragment">
     precision   highp float;
     uniform     float   u_time;
-    uniform     vec2    u_mouse;
+    uniform     vec2    u_singularities[8];
     varying     vec2    v_bilerpOutput;
     #define R               vec2(1.0, 0.0)
     #define I               vec2(0.0, 1.0)
     #define PI              3.14159265
+    #define E               2.71828183
+    #define LOOP_10(X)      X X X X X X X X X X
+    #define LOOP_20(X)      LOOP_10(X) LOOP_10(X)
     #define product(a, b)   vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x)
     #define square(z)       product(z, z)
     #define conjugate(a)    vec2(a.x, -a.y)
@@ -31,12 +34,12 @@
         float modulus      = length(z);
         float bandStart    = 0.0;
         float bandEnd      = 1.0;
-        for (int i = 0; i<10; i++){
+        LOOP_20(
             if (modulus > bandEnd){ // Chose first band that modulus sits in
-                bandStart   = bandEnd;
-                bandEnd     = bandEnd * 2.7183;
+                bandStart = bandEnd;
+                bandEnd *= E;
             }
-        }
+        )
         float k = (modulus - bandStart) / (bandEnd - bandStart);    // Proportion through band
         k = (k < 0.5) ? (2.0 * k) : (1.0 - 2.0 * (k - 0.5));        // Take Saturation as rise and fall /\/\/\/\/\/\ and not saw tooth  /|/|/|/|
         if (k<0.0) k=0.0;
@@ -84,17 +87,25 @@
 
         vec2    z = v_bilerpOutput;
         vec2    c = z;
-        vec2    z1, z2, z3, z4, z5, z6, z7, z8;
-        // f = (z - 1) * (z + 1) * (z - 3 - I) * (z - 6 - I) / ( (z + 2 + I) * (z - 3) );
-        z1 = z - u_mouse;
-        z2 = z + R;
-        z3 = z - 3.0*R - I;
-        z4 = z - targetPt.xy;
-        z5 = z + 2.0*R + I;
-        z6 = z - 3.0*R;
-        z7 = product(product(z1, z2), product(z3, z4));
-        z8 = product(z5, z6);
-        z  = divide(z7, z8);
+        vec2    z1, z2, z3, z4, z5, z6, z7, z8, z9, z10;
+        z1 = z - u_singularities[0];
+        z2 = z - u_singularities[1];
+        z3 = z - u_singularities[2];
+        z4 = z - u_singularities[3];
+        z5 = z - u_singularities[4];
+        z6 = z - u_singularities[5];
+        z7 = z - u_singularities[6];
+        z8 = z - u_singularities[7];
+        z9 = z - targetPt.xy;
+        z10= z + 2.0*R + I;
+        // z6 = z - 3.0*R;
+        z1 = product(product(z1, z2), product(z3, z4));
+        z2 = product(product(z4, z5), product(z6, z7));
+        z  = product(z1, z2);
+        z  = product(z, z9);
+        z  = divide(z, z10);
+        z  = divide(z, z10);
+        z  = divide(z, z10);
 
         gl_FragColor = mapHSVtoRGB(chooseHSV(z));
     }
@@ -102,11 +113,27 @@
 <script type="text/javascript">
     var mouseX = 0;
     var mouseY = 0;
+    var ticks = 0.0;
+    var u_viewScale = 18;
+
+    var singularities = [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]];
     var canvas  = document.createElement("canvas");
-    canvas.width = canvas.height = 2048;
+    canvas.width = canvas.height = 1024;
     var userEvent = function(e) {
-        mouseX = ((e.clientX || e.changedTouches[0].clientX) - canvas.getBoundingClientRect().left) / (0.5*canvas.width) - 1.0;
-        mouseY = ((e.clientY || e.changedTouches[0].clientY) - canvas.getBoundingClientRect().top ) / (0.5*canvas.width) - 1.0;
+        e.preventDefault();
+        if (!e.changedTouches || e.changedTouches.length === 0) {
+            singularities[0]=[
+                u_viewScale * ((e.clientX - canvas.getBoundingClientRect().left) / (0.5*canvas.width) - 1.0),
+                u_viewScale * (0.0 - ((e.clientY - canvas.getBoundingClientRect().top ) / (0.5*canvas.width) - 1.0))
+            ];
+        } else {
+            for (var i = 0; i < e.changedTouches.length; i++){
+                singularities[i]=[
+                    u_viewScale * ((e.changedTouches[i].clientX - canvas.getBoundingClientRect().left) / (0.5*canvas.width) - 1.0),
+                    u_viewScale * (0.0 - ((e.changedTouches[i].clientY - canvas.getBoundingClientRect().top ) / (0.5*canvas.width) - 1.0))
+                ];
+            }
+        }
     };
     canvas.addEventListener("mousemove", userEvent);
     canvas.addEventListener("mousedown", userEvent);
@@ -114,7 +141,7 @@
     canvas.addEventListener("touchmove", userEvent);
     document.body.appendChild(canvas);
 
-    var gl      = canvas.getContext("webgl");
+    var gl = canvas.getContext("webgl");
 
     var vertexShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertexShader, document.getElementById("x-vertex").text);
@@ -133,12 +160,17 @@
     gl.bufferData(gl.ARRAY_BUFFER, uniqueButMeaninglessLabels, gl.STATIC_DRAW);
     gl.vertexAttribPointer(     gl.getAttribLocation(shaderProgram, "a_label"), 1, gl.FLOAT, false, 0, 0);   // 'Vertex' attributes of size 1
     gl.enableVertexAttribArray( gl.getAttribLocation(shaderProgram, "a_label"));
-    var ticks = 0.0;
-    var u_viewScale = 18;
     var animate = function(){
-        gl.uniform1f(gl.getUniformLocation(shaderProgram, "u_time"), ticks++);
+        gl.uniform1f(gl.getUniformLocation(shaderProgram, "u_time"), ticks);
         gl.uniform1f(gl.getUniformLocation(shaderProgram, "u_viewScale"), u_viewScale);
-        gl.uniform2f(gl.getUniformLocation(shaderProgram, "u_mouse"), u_viewScale * mouseX, u_viewScale * (-mouseY));
+        gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[0]"), singularities[0]);
+        gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[1]"), singularities[1]);
+        gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[2]"), singularities[2]);
+        gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[3]"), singularities[3]);
+        gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[4]"), singularities[4]);
+        gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[5]"), singularities[5]);
+        gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[6]"), singularities[6]);
+        gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[7]"), singularities[7]);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, uniqueButMeaninglessLabels.length);
         window.requestAnimationFrame(animate);
     };
