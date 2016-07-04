@@ -5,6 +5,7 @@ A specific extension that is beyond the scope of helloParallelism, to explore th
 https://webglfundamentals.org/
 http://www.tutorialspoint.com/webgl/webgl_tutorial.pdf
 http://learningwebgl.com/blog/?page_id=1217
+http://www.lighthouse3d.com/tutorials/glsl-tutorial/inter-shader-communication/
 
 # Approach
 Set some increasingly less trivial tasks / challenges to take us towards more relevant topics
