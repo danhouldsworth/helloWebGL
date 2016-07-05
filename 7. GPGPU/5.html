@@ -1,7 +1,4 @@
-<body>
-    <canvas id="canvas" ></canvas>
-</body>
-
+<body></body>
 <script id="x-fragment" type="x-shader">
   precision mediump float;
 
@@ -115,7 +112,6 @@
     }
   }
 </script>
-
 <script id="x-vertex" type="x-shader">
   attribute vec2 aVertexPosition;
   attribute vec3 aPlotPosition;
@@ -124,17 +120,18 @@
 
   void main(void)
   {
-    gl_Position = vec4(aVertexPosition, 1.0, 1.0);
+    gl_Position = vec4(aVertexPosition, 0.0, 1.0);
     vPosition = aPlotPosition;
  }
 </script>
 
-
 <script>
 
-    var canvas = document.getElementById("canvas");
-    var gl = canvas.getContext("experimental-webgl");
-    gl.viewport(0, 0, canvas.width, canvas.height);
+    var canvas  = document.createElement("canvas"); document.body.appendChild(canvas);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    var ratio = canvas.width / canvas.height;
+    var gl = canvas.getContext("webgl");
 
     var vertexShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertexShader, document.getElementById("x-vertex").text);
@@ -149,12 +146,7 @@
     gl.useProgram(shaderProgram);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-         1.0,  1.0,
-        -1.0,  1.0,
-         1.0, -1.0,
-        -1.0, -1.0,
-    ]), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1.0,  1.0, -1.0,  1.0, 1.0, -1.0, -1.0, -1.0,]), gl.STATIC_DRAW);
     gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aVertexPosition"), 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexPosition"));
 
@@ -166,127 +158,103 @@
     var sphere1Center   = gl.getUniformLocation(shaderProgram, "sphere1Center");
     var sphere2Center   = gl.getUniformLocation(shaderProgram, "sphere2Center");
     var sphere3Center   = gl.getUniformLocation(shaderProgram, "sphere3Center");
+    var t = 0;
 
-  function crossProd(v1, v2) {
-    return { x: v1.y*v2.z - v2.y*v1.z,
-             y: v1.z*v2.x - v2.z*v1.x,
-             z: v1.x*v2.y - v2.x*v1.y };
-  }
-
-  function normalize(v) {
-    l = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
-    return { x: v.x/l, y: v.y/l, z: v.z/l };
-  }
-
-  function vectAdd(v1, v2) {
-    return { x: v1.x + v2.x, y: v1.y + v2.y, z: v1.z + v2.z };
-  }
-
-  function vectSub(v1, v2) {
-    return { x: v1.x - v2.x, y: v1.y - v2.y, z: v1.z - v2.z };
-  }
-
-  function vectMul(v, l) {
-    return { x: v.x*l, y: v.y*l, z: v.z*l };
-  }
-
-  function pushVec(v, arr) {
-    arr.push(v.x, v.y, v.z);
-  }
-
-  t = 0;
-  function drawScene()
-  {
-    x1 = Math.sin(t * 1.1) * 1.5;
-    y1 = Math.cos(t * 1.3) * 1.5;
-    z1 = Math.sin(t + Math.PI/3) * 1.5;
-    x2 = Math.cos(t * 1.2) * 1.5;
-    y2 = Math.sin(t * 1.4) * 1.5;
-    z2 = Math.sin(t*1.25 - Math.PI/3) * 1.5;
-    x3 = Math.cos(t * 1.15) * 1.5;
-    y3 = Math.sin(t * 1.37) * 1.5;
-    z3 = Math.sin(t*1.27) * 1.5;
-
-    cameraFrom = { x: Math.sin(t * 0.4) * 18,
-                   y: Math.sin(t * 0.13) * 5 + 5,
-                   z: Math.cos(t * 0.4) * 18 };
-    cameraTo = { x:0, y:0, z:0 };
-    cameraPersp = 6;
-    up = { x: 0, y: 1, z: 0 };
-    cameraDir = normalize(vectSub(cameraTo, cameraFrom));
-
-    cameraLeft = normalize(crossProd(cameraDir, up));
-    cameraUp = normalize(crossProd(cameraLeft, cameraDir));
-    // cameraFrom + cameraDir * cameraPersp
-    cameraCenter = vectAdd(cameraFrom, vectMul(cameraDir, cameraPersp));
-    // cameraCenter + cameraUp + cameraLeft * ratio
-    cameraTopLeft  = vectAdd(vectAdd(cameraCenter, cameraUp),
-                             vectMul(cameraLeft, ratio));
-    cameraBotLeft  = vectAdd(vectSub(cameraCenter, cameraUp),
-                             vectMul(cameraLeft, ratio));
-    cameraTopRight = vectSub(vectAdd(cameraCenter, cameraUp),
-                             vectMul(cameraLeft, ratio));
-    cameraBotRight = vectSub(vectSub(cameraCenter, cameraUp),
-                             vectMul(cameraLeft, ratio));
-
-
-    //corners = [1.2, 1, -12, -1.2, 1, -12, 1.2, -1, -12, -1.2, -1, -12];
-    corners = [];
-    pushVec(cameraTopRight, corners);
-    pushVec(cameraTopLeft, corners);
-    pushVec(cameraBotRight, corners);
-    pushVec(cameraBotLeft, corners);
-
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(corners), gl.STATIC_DRAW);
-
-    gl.uniform3f(cameraPos, cameraFrom.x, cameraFrom.y, cameraFrom.z);
-    gl.uniform3f(sphere1Center, x1, y1, z1);
-    gl.uniform3f(sphere2Center, x2, y2, z2);
-    gl.uniform3f(sphere3Center, x3, y3, z3);
-
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-    t += 0.03;
-    if (t > Math.PI * 200) {
-      t -= Math.PI * 200;
+    function crossProd(v1, v2) {
+        return {
+            x: v1.y * v2.z - v2.y * v1.z,
+            y: v1.z * v2.x - v2.z * v1.x,
+            z: v1.x * v2.y - v2.x * v1.y
+        };
     }
-  }
 
-  var timer = 0;
+    function normalize(v) {
+        l = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+        return {
+            x : v.x / l,
+            y : v.y / l,
+            z : v.z / l
+        };
+    }
+
+    function vectAdd(v1, v2) {
+        return {
+            x : v1.x + v2.x,
+            y : v1.y + v2.y,
+            z : v1.z + v2.z
+        };
+    }
+
+    function vectSub(v1, v2) {
+        return {
+            x : v1.x - v2.x,
+            y : v1.y - v2.y,
+            z : v1.z - v2.z
+        };
+    }
+
+    function vectMul(v, l) {
+        return {
+            x : v.x * l,
+            y : v.y * l,
+            z : v.z * l
+        };
+    }
+
+    function pushVec(v, arr) {
+        arr.push(v.x, v.y, v.z);
+    }
 
 
+    function drawScene() {
+        t += .01;
+        x1 = Math.sin(t * 1.1)      * 1.9;
+        y1 = Math.cos(t * 1.3)      * 1.9;
+        z1 = Math.sin(t + Math.PI/3)* 1.9;
+        x2 = Math.cos(t * 1.2)      * 1.9;
+        y2 = Math.sin(t * 1.4)      * 1.9;
+        z2 = Math.sin(t * 1.25 - Math.PI/3) * 1.9;
+        x3 = Math.cos(t * 1.15)     * 1.9;
+        y3 = Math.sin(t * 1.37)     * 1.9;
+        z3 = Math.sin(t * 1.27)     * 1.9;
 
-  var ratio;
-  function resizeCanvas(w)
-  {
-    ratio = 1.6;
-    canvas.parentNode.style.position = "";
-    canvas.parentNode.style.top = "";
-    window.onresize = null;
-    canvas.width = w;
-    canvas.height = w / ratio;
+        cameraFrom = {
+            x : Math.sin(t * 0.3)   * 18,
+            y : Math.sin(t * 0.2)   * 10 + 10,
+            z : Math.cos(t * 0.4)   * 18
+        };
+        cameraTo = {
+            x : 0, y : 0, z : 0
+        };
 
-    gl.viewport(0, 0, canvas.width, canvas.height);
+        cameraPersp = 6;
 
-    t -= 0.03;
+        up = { x: 0, y: 1, z: 0 };
+
+        cameraDir   = normalize(vectSub(cameraTo, cameraFrom));
+        cameraLeft  = normalize(crossProd(cameraDir, up));
+        cameraUp    = normalize(crossProd(cameraLeft, cameraDir));
+        cameraCenter= vectAdd( cameraFrom, vectMul(cameraDir, cameraPersp) );                       // cameraFrom + cameraDir * cameraPersp
+        cameraTopLeft  = vectAdd( vectAdd(cameraCenter, cameraUp), vectMul(cameraLeft, ratio) );    // cameraCenter + cameraUp + cameraLeft * ratio
+        cameraBotLeft  = vectAdd( vectSub(cameraCenter, cameraUp), vectMul(cameraLeft, ratio) );    // cameraCenter - cameraUp + cameraLeft * ratio
+        cameraTopRight = vectSub( vectAdd(cameraCenter, cameraUp), vectMul(cameraLeft, ratio) );    // cameraCenter + cameraUp - cameraLeft * ratio
+        cameraBotRight = vectSub( vectSub(cameraCenter, cameraUp), vectMul(cameraLeft, ratio) );    // cameraCenter - cameraUp - cameraLeft * ratio
+
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            cameraTopRight.x,   cameraTopRight.y,   cameraTopRight.z,
+            cameraTopLeft.x,    cameraTopLeft.y,    cameraTopLeft.z,
+            cameraBotRight.x,   cameraBotRight.y,   cameraBotRight.z,
+            cameraBotLeft.x,    cameraBotLeft.y,    cameraBotLeft.z
+        ]), gl.STATIC_DRAW);
+
+        gl.uniform3f(cameraPos, cameraFrom.x, cameraFrom.y, cameraFrom.z);
+        gl.uniform3f(sphere1Center, x1, y1, z1);
+        gl.uniform3f(sphere2Center, x2, y2, z2);
+        gl.uniform3f(sphere3Center, x3, y3, z3);
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        window.requestAnimationFrame(drawScene);
+    }
     drawScene();
-  }
-
-  var resizeTimer = false;
-  function fullScreen() {
-    window.onresize = function() {
-      if (resizeTimer) {
-        clearTimeout(resizeTimer);
-      }
-      resizeTimer = setTimeout(function() {
-        fullScreen();
-      }, 100);
-    };
-    fullScreen();
-  }
-timer = setInterval(drawScene, 15);
-
-gl.clearColor(0.0, 0.0, 0.0, 1.0);
-gl.clearDepth(1.0);
-resizeCanvas(2000);
 </script>
