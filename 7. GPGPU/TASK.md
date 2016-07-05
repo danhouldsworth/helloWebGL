@@ -11,6 +11,8 @@ Notes:
 - Very useful summary of OpenGL ES2.0 issues vs OpenGL 3+ : http://www.atmind.nl/?p=623
 eg. while(){} loops not allowed. for(){} loops only allowed under much stricter index conditions
 *No LOOPS at all on iOS - they crash that instance of the frag shader*
+Notice - that lowp, mediump, highp made a difference to the distortion.
+Also - The loops for banding on complex lolipop seemed to work on even / odd iterations??
 [https://en.wikipedia.org/wiki/Complex_analysis#/media/File:Color_complex_plot.jpg]
 
 Q. It constrasting ES2.0 & ESSL vs OpenGL & GLSL - is it just that :

@@ -1,136 +1,156 @@
+<!--
+What is aPlotPosition?
+ -->
 <body></body>
 <script id="x-fragment" type="x-shader">
-  precision mediump float;
+    precision highp float;
+    const   vec3 lightDir   = 1.1 * normalize(vec3(1.0, 1.0, -1.0));
+    const   vec3 blandColour= 1.0 * normalize(vec3(1.0, 1.0, 1.0));
+    const   float ambience  = 0.5;
+    const   float diffussion= 0.3;
+    const   float shinyness = 0.7;
+    varying vec3 vPosition;
+    varying vec3 cameraPostion;
+    varying vec4 spherePos[6];
+    varying vec3 sphereCol[6];
 
-  const vec3 lightDir = vec3(0.577350269, 0.577350269, -0.577350269);
-  varying vec3 vPosition;
-  uniform vec3 cameraPos;
-  uniform vec3 sphere1Center;
-  uniform vec3 sphere2Center;
-  uniform vec3 sphere3Center;
-
-  bool intersectSphere(vec3 center, vec3 lStart, vec3 lDir,
-                       out float dist) {
-    vec3 c = center - lStart;
-    float b = dot(lDir, c);
-    float d = b*b - dot(c, c) + 1.0;
-    if (d < 0.0) {
-      dist = 10000.0;
-      return false;
-    }
-
-    dist = b - sqrt(d);
-    if (dist < 0.0) {
-      dist = 10000.0;
-      return false;
-    }
-
-    return true;
-  }
-
-  vec3 lightAt(vec3 N, vec3 V, vec3 color) {
-    vec3 L = lightDir;
-    vec3 R = reflect(-L, N);
-
-    float c = 0.3 + 0.4 * pow(max(dot(R, V), 0.0), 30.0) + 0.7 * dot(L, N);
-
-    if (c > 1.0) {
-      return mix(color, vec3(1.6, 1.6, 1.6), c - 1.0);
-    }
-
-    return c * color;
-  }
-
-  bool intersectWorld(vec3 lStart, vec3 lDir, out vec3 pos,
-                      out vec3 normal, out vec3 color) {
-    float d1, d2, d3;
-    bool h1, h2, h3;
-
-    h1 = intersectSphere(sphere1Center, lStart, lDir, d1);
-    h2 = intersectSphere(sphere2Center, lStart, lDir, d2);
-    h3 = intersectSphere(sphere3Center, lStart, lDir, d3);
-
-    if (h1 && d1 < d2 && d1 < d3) {
-      pos = lStart + d1 * lDir;
-      normal = pos - sphere1Center;
-      color = vec3(0.0, 0.0, 0.9);
-    }
-    else if (h2 && d2 < d3) {
-      pos = lStart + d2 * lDir;
-      normal = pos - sphere2Center;
-      color = vec3(0.9, 0.0, 0.0);
-    }
-    else if (h3) {
-      pos = lStart + d3 * lDir;
-      normal = pos - sphere3Center;
-      color = vec3(0.0, 0.9, 0.0);
-    }
-    else if (lDir.y < -0.01) {
-      pos = lStart + ((lStart.y + 2.7) / -lDir.y) * lDir;
-      if (pos.x*pos.x + pos.z*pos.z > 30.0) {
-        return false;
-      }
-      normal = vec3(0.0, 1.0, 0.0);
-      if (fract(pos.x / 5.0) > 0.5 == fract(pos.z / 5.0) > 0.5) {
-        color = vec3(1.0);
-      }
-      else {
-        color = vec3(0.0);
-      }
-    }
-    else {
-     return false;
-    }
-
-    return true;
-  }
-
-  void main(void)
-  {
-    vec3 cameraDir = normalize(vPosition - cameraPos);
-
-    vec3 p1, norm, p2;
-    vec3 col, colT, colM, col3;
-    if (intersectWorld(cameraPos, cameraDir, p1,
-                       norm, colT)) {
-      col = lightAt(norm, -cameraDir, colT);
-      colM = (colT + vec3(0.7)) / 1.7;
-      cameraDir = reflect(cameraDir, norm);
-      if (intersectWorld(p1, cameraDir, p2, norm, colT)) {
-        col += lightAt(norm, -cameraDir, colT) * colM;
-        colM *= (colT + vec3(0.7)) / 1.7;
-        cameraDir = reflect(cameraDir, norm);
-        if (intersectWorld(p2, cameraDir, p1, norm, colT)) {
-          col += lightAt(norm, -cameraDir, colT) * colM;
+    bool intersectSphere(vec4 sphere, vec3 lStart, vec3 lDir, out float dist) {
+        vec3    c = sphere.xyz - lStart;
+        float   b = dot(lDir, c);
+        float   d = sphere.w + b * b - dot(c, c);
+        if (d < 0.0) {
+            dist = 10000.0;
+            return false;
         }
-      }
 
-      gl_FragColor = vec4(col, 1.0);
+        dist = b - sqrt(d);
+        if (dist < 0.0) {
+            dist = 10000.0;
+            return false;
+        }
+
+        return true;
     }
-    else {
-      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+
+    vec3 lightAt(vec3 instersectNormal, vec3 rayDirection, vec3 color) {
+        float visibleLightReflection = dot(reflect(lightDir, instersectNormal), rayDirection);
+        if (visibleLightReflection < 0.0) visibleLightReflection = 0.0;
+        float saturation = ambience
+                + shinyness   * pow(visibleLightReflection, 50.0)
+                + diffussion  * dot(lightDir, instersectNormal);
+        if (saturation > 1.0){
+            float overSaturation = saturation - 1.0;
+            return mix(color, 2.0 * blandColour, overSaturation);
+        }
+        return saturation * color;
     }
-  }
+
+    bool intersectWorld(vec3 lStart, inout vec3 rayDirection, out vec3 intersectPosition, inout vec3 endColour, inout vec3 colM) {
+        float d[6];
+        vec3 instersectNormal, collisionColor;
+        bool h1 = intersectSphere(spherePos[1], lStart, rayDirection, d[1]);
+        bool h2 = intersectSphere(spherePos[2], lStart, rayDirection, d[2]);
+        bool h3 = intersectSphere(spherePos[3], lStart, rayDirection, d[3]);
+        bool h4 = intersectSphere(spherePos[4], lStart, rayDirection, d[4]);
+        bool h5 = intersectSphere(spherePos[5], lStart, rayDirection, d[5]);
+
+        if (h1 && d[1] < d[2] && d[1] < d[3] && d[1] < d[4] && d[1] < d[5]) {
+            intersectPosition   = lStart + d[1] * rayDirection;
+            instersectNormal    = intersectPosition - spherePos[1].xyz ;
+            collisionColor      = sphereCol[1];
+        } else if (h2 && d[2] < d[3] && d[2] < d[4] && d[2] < d[5]) {
+            intersectPosition   = lStart + d[2] * rayDirection;
+            instersectNormal    = intersectPosition - spherePos[2].xyz ;
+            collisionColor      = sphereCol[2];
+        } else if (h3 && d[3] < d[4] && d[3] < d[5]) {
+            intersectPosition   = lStart + d[3] * rayDirection;
+            instersectNormal    = intersectPosition - spherePos[3].xyz ;
+            collisionColor      = sphereCol[3];
+        } else if (h4 && d[4] < d[5]) {
+            intersectPosition   = lStart + d[4] * rayDirection;
+            instersectNormal    = intersectPosition - spherePos[4].xyz ;
+            collisionColor      = sphereCol[4];
+        } else if (h5) {
+            intersectPosition   = lStart + d[5] * rayDirection;
+            instersectNormal    = intersectPosition - spherePos[5].xyz ;
+            collisionColor      = sphereCol[5];
+        } else if (rayDirection.y < 0.0) {
+            intersectPosition = lStart + ((lStart.y + 2.7) / -rayDirection.y) * rayDirection;
+            if (length(intersectPosition.xz) > 10.0) return false;
+            instersectNormal = vec3(0.0, 1.0, 0.0);
+            if (fract(intersectPosition.x) > 0.5 == fract(intersectPosition.z) > 0.5)   collisionColor = vec3(1.0, 1.0, 1.0);
+            else                                                                        collisionColor = vec3(0.5, 0.5, 0.0);
+        } else return false;
+        endColour   += lightAt(instersectNormal, rayDirection, collisionColor);
+        colM        *= mix(blandColour, collisionColor, 0.7);
+        endColour   *= colM;
+        rayDirection = reflect(rayDirection, instersectNormal);
+        return true;
+    }
+
+void main(void) {
+    vec3 cameraDir = normalize(vPosition - cameraPostion);
+    vec3 intersectPosition1, intersectPosition2, intersectPosition3;
+    vec3 endColour, colM;
+    endColour               = vec3(0.0, 0.0, 0.0);
+    colM                    = vec3(1.0, 1.0, 1.0);
+    if (intersectWorld(cameraPostion, cameraDir, intersectPosition1, endColour, colM)) {
+        if (intersectWorld(intersectPosition1, cameraDir, intersectPosition2, endColour, colM)) {
+            if (intersectWorld(intersectPosition2, cameraDir, intersectPosition3, endColour, colM)) {
+                intersectWorld(intersectPosition3, cameraDir, intersectPosition1, endColour, colM);
+            }
+        }
+        gl_FragColor = vec4(endColour, 1.0);
+    } else {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    }
+}
 </script>
 <script id="x-vertex" type="x-shader">
-  attribute vec2 aVertexPosition;
-  attribute vec3 aPlotPosition;
+    attribute   float   a_label;
+    uniform     float   u_time;
+    uniform     float   u_ratio;
+    varying     vec3    vPosition;
+    varying     vec3    cameraPostion;
+    varying     vec4    spherePos[6];
+    varying     vec3    sphereCol[6];
+    #define     PI      3.14159265
+    void main(void) {
+        vec3 cameraTo   = vec3(0.0, 0.0, 0.0);
+        vec3 up         = vec3(0.0, 1.0, 0.0);
+        float cameraPersp = 5.0;
 
-  varying vec3 vPosition;
+        cameraPostion   = vec3(sin(u_time * 0.003) * 20.0,sin(u_time * 0.002) * 10.0 + 10.0,cos(u_time * 0.001) * 20.0);
+        sphereCol[1]   = vec3(0.5, 0.5, 0.5);
+        sphereCol[2]   = vec3(1.0, 1.0, 1.0);
+        sphereCol[3]   = vec3(0.0, 0.0, 0.0);
+        sphereCol[4]   = vec3(0.5, 0.0, 0.0);
+        sphereCol[5]   = vec3(0.0, 0.5, 0.5);
+        spherePos[1]   = vec4( +0.0,                         -2.0 + 0.5 * abs(sin(u_time * 0.2)),    +0.0,                       1.0);
+        spherePos[2]   = vec4( +2.0 * cos(u_time * 0.03),    -1.9,                                   +2.0 * sin(u_time * 0.03),  1.0);
+        spherePos[3]   = vec4( +4.0 * sin(u_time * 0.02),    -1.9,                                   +4.0 * cos(u_time * 0.02),  1.0);
+        spherePos[4]   = vec4( +2.0 * sin(u_time * 0.06),    +0.5 * abs(sin(u_time * 0.2)),          +2.0 * cos(u_time * 0.06),  0.0) + spherePos[3];
+        spherePos[5]   = vec4( +0.0,                         +2.0 * abs(sin(u_time * 0.1)),          +0.0,                       1.0);
 
-  void main(void)
-  {
-    gl_Position = vec4(aVertexPosition, 0.0, 1.0);
-    vPosition = aPlotPosition;
- }
+        vec3 cameraDir  = normalize(cameraTo - cameraPostion);
+        vec3 cameraLeft = normalize(cross(cameraDir, up));
+        vec3 cameraUp   = normalize(cross(cameraLeft, cameraDir));
+        vec3 cameraCenter= cameraPostion + cameraDir * cameraPersp;
+        vec3 cameraTopLeft  = cameraCenter + cameraUp + cameraLeft * u_ratio;
+        vec3 cameraBotLeft  = cameraCenter - cameraUp + cameraLeft * u_ratio;
+        vec3 cameraTopRight = cameraCenter + cameraUp - cameraLeft * u_ratio;
+        vec3 cameraBotRight = cameraCenter - cameraUp - cameraLeft * u_ratio;
+
+        if      (a_label == 1.0) {gl_Position = vec4(+1.0, +1.0, 0.0, 1.0); vPosition = cameraTopRight;}
+        else if (a_label == 2.0) {gl_Position = vec4(-1.0, +1.0, 0.0, 1.0); vPosition = cameraTopLeft;}
+        else if (a_label == 3.0) {gl_Position = vec4(+1.0, -1.0, 0.0, 1.0); vPosition = cameraBotRight;}
+        else if (a_label == 4.0) {gl_Position = vec4(-1.0, -1.0, 0.0, 1.0); vPosition = cameraBotLeft;}
+    }
 </script>
-
 <script>
-
     var canvas  = document.createElement("canvas"); document.body.appendChild(canvas);
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    var ratio = canvas.width / canvas.height;
     var gl = canvas.getContext("webgl");
 
     var vertexShader = gl.createShader(gl.VERTEX_SHADER);
@@ -146,114 +166,15 @@
     gl.useProgram(shaderProgram);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1.0,  1.0, -1.0,  1.0, 1.0, -1.0, -1.0, -1.0,]), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aVertexPosition"), 2, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aVertexPosition"));
+    gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "a_label"), 1, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "a_label"));
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1,2,3,4]), gl.STATIC_DRAW);
+    gl.uniform1f(gl.getUniformLocation(shaderProgram, "u_ratio"), (canvas.width / canvas.height));
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-    gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "aPlotPosition"), 3, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aPlotPosition"));
-
-    var cameraPos       = gl.getUniformLocation(shaderProgram, "cameraPos");
-    var sphere1Center   = gl.getUniformLocation(shaderProgram, "sphere1Center");
-    var sphere2Center   = gl.getUniformLocation(shaderProgram, "sphere2Center");
-    var sphere3Center   = gl.getUniformLocation(shaderProgram, "sphere3Center");
     var t = 0;
-
-    function crossProd(v1, v2) {
-        return {
-            x: v1.y * v2.z - v2.y * v1.z,
-            y: v1.z * v2.x - v2.z * v1.x,
-            z: v1.x * v2.y - v2.x * v1.y
-        };
-    }
-
-    function normalize(v) {
-        l = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-        return {
-            x : v.x / l,
-            y : v.y / l,
-            z : v.z / l
-        };
-    }
-
-    function vectAdd(v1, v2) {
-        return {
-            x : v1.x + v2.x,
-            y : v1.y + v2.y,
-            z : v1.z + v2.z
-        };
-    }
-
-    function vectSub(v1, v2) {
-        return {
-            x : v1.x - v2.x,
-            y : v1.y - v2.y,
-            z : v1.z - v2.z
-        };
-    }
-
-    function vectMul(v, l) {
-        return {
-            x : v.x * l,
-            y : v.y * l,
-            z : v.z * l
-        };
-    }
-
-    function pushVec(v, arr) {
-        arr.push(v.x, v.y, v.z);
-    }
-
-
     function drawScene() {
-        t += .01;
-        x1 = Math.sin(t * 1.1)      * 1.9;
-        y1 = Math.cos(t * 1.3)      * 1.9;
-        z1 = Math.sin(t + Math.PI/3)* 1.9;
-        x2 = Math.cos(t * 1.2)      * 1.9;
-        y2 = Math.sin(t * 1.4)      * 1.9;
-        z2 = Math.sin(t * 1.25 - Math.PI/3) * 1.9;
-        x3 = Math.cos(t * 1.15)     * 1.9;
-        y3 = Math.sin(t * 1.37)     * 1.9;
-        z3 = Math.sin(t * 1.27)     * 1.9;
-
-        cameraFrom = {
-            x : Math.sin(t * 0.3)   * 18,
-            y : Math.sin(t * 0.2)   * 10 + 10,
-            z : Math.cos(t * 0.4)   * 18
-        };
-        cameraTo = {
-            x : 0, y : 0, z : 0
-        };
-
-        cameraPersp = 6;
-
-        up = { x: 0, y: 1, z: 0 };
-
-        cameraDir   = normalize(vectSub(cameraTo, cameraFrom));
-        cameraLeft  = normalize(crossProd(cameraDir, up));
-        cameraUp    = normalize(crossProd(cameraLeft, cameraDir));
-        cameraCenter= vectAdd( cameraFrom, vectMul(cameraDir, cameraPersp) );                       // cameraFrom + cameraDir * cameraPersp
-        cameraTopLeft  = vectAdd( vectAdd(cameraCenter, cameraUp), vectMul(cameraLeft, ratio) );    // cameraCenter + cameraUp + cameraLeft * ratio
-        cameraBotLeft  = vectAdd( vectSub(cameraCenter, cameraUp), vectMul(cameraLeft, ratio) );    // cameraCenter - cameraUp + cameraLeft * ratio
-        cameraTopRight = vectSub( vectAdd(cameraCenter, cameraUp), vectMul(cameraLeft, ratio) );    // cameraCenter + cameraUp - cameraLeft * ratio
-        cameraBotRight = vectSub( vectSub(cameraCenter, cameraUp), vectMul(cameraLeft, ratio) );    // cameraCenter - cameraUp - cameraLeft * ratio
-
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            cameraTopRight.x,   cameraTopRight.y,   cameraTopRight.z,
-            cameraTopLeft.x,    cameraTopLeft.y,    cameraTopLeft.z,
-            cameraBotRight.x,   cameraBotRight.y,   cameraBotRight.z,
-            cameraBotLeft.x,    cameraBotLeft.y,    cameraBotLeft.z
-        ]), gl.STATIC_DRAW);
-
-        gl.uniform3f(cameraPos, cameraFrom.x, cameraFrom.y, cameraFrom.z);
-        gl.uniform3f(sphere1Center, x1, y1, z1);
-        gl.uniform3f(sphere2Center, x2, y2, z2);
-        gl.uniform3f(sphere3Center, x3, y3, z3);
-
+        gl.uniform1f(gl.getUniformLocation(shaderProgram, "u_time"), t++);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
         window.requestAnimationFrame(drawScene);
     }
     drawScene();
