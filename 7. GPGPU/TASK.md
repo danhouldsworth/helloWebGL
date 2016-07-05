@@ -14,6 +14,7 @@ eg. while(){} loops not allowed. for(){} loops only allowed under much stricter 
 Notice - that lowp, mediump, highp made a difference to the distortion.
 Also - The loops for banding on complex lolipop seemed to work on even / odd iterations??
 [https://en.wikipedia.org/wiki/Complex_analysis#/media/File:Color_complex_plot.jpg]
+ALSO - array indexing NOT allowed for anything other than CONST in WebGL/GLES2
 
 Q. It constrasting ES2.0 & ESSL vs OpenGL & GLSL - is it just that :
  - a subset of the system calls & syntax is allowable OR

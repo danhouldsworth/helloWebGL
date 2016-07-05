@@ -5,7 +5,7 @@ What is aPlotPosition?
 <script id="x-fragment" type="x-shader">
     precision highp float;
     const   vec3 lightDir   = 1.1 * normalize(vec3(1.0, 1.0, -1.0));
-    const   vec3 blandColour= 1.0 * normalize(vec3(1.0, 1.0, 1.0));
+    const   vec3 blandColour= 1.1 * normalize(vec3(1.0, 1.0, 1.0));
     const   float ambience  = 0.5;
     const   float diffussion= 0.3;
     const   float shinyness = 0.7;
@@ -14,22 +14,38 @@ What is aPlotPosition?
     varying vec4 spherePos[6];
     varying vec3 sphereCol[6];
 
-    bool intersectSphere(vec4 sphere, vec3 lStart, vec3 lDir, out float dist) {
-        vec3    c = sphere.xyz - lStart;
-        float   b = dot(lDir, c);
+    bool intersectSphere(vec4 sphere, vec3 rayStart, vec3 rayDirection, out float distance) {
+        vec3    c = sphere.xyz - rayStart;
+        float   b = dot(rayDirection, c);
         float   d = sphere.w + b * b - dot(c, c);
         if (d < 0.0) {
-            dist = 10000.0;
+            distance = 999.0;
             return false;
         }
-
-        dist = b - sqrt(d);
-        if (dist < 0.0) {
-            dist = 10000.0;
+        distance = b - sqrt(d);
+        if (distance < 0.0) {
+            distance = 999.0;
             return false;
         }
-
         return true;
+
+        // vec3    relSpherePos = sphere.xyz - rayStart;
+        // float   b = dot(relSpherePos, rayDirection);
+        // float   c2 = dot(relSpherePos, relSpherePos);
+        // float   a2 = c2 - b*b; // pythag
+
+        // if (a2 > (sphere.w * sphere.w)) {
+        //     distance = 10000.0;
+        //     return false;
+        // }
+        // float a = sqrt(a2);
+        // distance = b - a;
+        // if (distance < 0.0) {
+        //     distance = 10000.0;
+        //     return false;
+        // }
+
+        // return true;
     }
 
     vec3 lightAt(vec3 instersectNormal, vec3 rayDirection, vec3 color) {
@@ -46,41 +62,34 @@ What is aPlotPosition?
     }
 
     bool intersectWorld(vec3 lStart, inout vec3 rayDirection, out vec3 intersectPosition, inout vec3 endColour, inout vec3 colM) {
-        float d[6];
-        vec3 instersectNormal, collisionColor;
+        float d[6], distance;
+        vec3 instersectNormal, collisionColor, ballCenter;
+        bool ground = false;
         bool h1 = intersectSphere(spherePos[1], lStart, rayDirection, d[1]);
         bool h2 = intersectSphere(spherePos[2], lStart, rayDirection, d[2]);
         bool h3 = intersectSphere(spherePos[3], lStart, rayDirection, d[3]);
         bool h4 = intersectSphere(spherePos[4], lStart, rayDirection, d[4]);
         bool h5 = intersectSphere(spherePos[5], lStart, rayDirection, d[5]);
 
-        if (h1 && d[1] < d[2] && d[1] < d[3] && d[1] < d[4] && d[1] < d[5]) {
-            intersectPosition   = lStart + d[1] * rayDirection;
-            instersectNormal    = intersectPosition - spherePos[1].xyz ;
-            collisionColor      = sphereCol[1];
-        } else if (h2 && d[2] < d[3] && d[2] < d[4] && d[2] < d[5]) {
-            intersectPosition   = lStart + d[2] * rayDirection;
-            instersectNormal    = intersectPosition - spherePos[2].xyz ;
-            collisionColor      = sphereCol[2];
-        } else if (h3 && d[3] < d[4] && d[3] < d[5]) {
-            intersectPosition   = lStart + d[3] * rayDirection;
-            instersectNormal    = intersectPosition - spherePos[3].xyz ;
-            collisionColor      = sphereCol[3];
-        } else if (h4 && d[4] < d[5]) {
-            intersectPosition   = lStart + d[4] * rayDirection;
-            instersectNormal    = intersectPosition - spherePos[4].xyz ;
-            collisionColor      = sphereCol[4];
-        } else if (h5) {
-            intersectPosition   = lStart + d[5] * rayDirection;
-            instersectNormal    = intersectPosition - spherePos[5].xyz ;
-            collisionColor      = sphereCol[5];
-        } else if (rayDirection.y < 0.0) {
-            intersectPosition = lStart + ((lStart.y + 2.7) / -rayDirection.y) * rayDirection;
-            if (length(intersectPosition.xz) > 10.0) return false;
+        if      (h1 && d[1] < d[2] && d[1] < d[3] && d[1] < d[4] && d[1] < d[5]){distance = d[1]; collisionColor = sphereCol[1]; ballCenter = spherePos[1].xyz;}
+        else if (h2 && d[2] < d[3] && d[2] < d[4] && d[2] < d[5])               {distance = d[2]; collisionColor = sphereCol[2]; ballCenter = spherePos[2].xyz;}
+        else if (h3 && d[3] < d[4] && d[3] < d[5])                              {distance = d[3]; collisionColor = sphereCol[3]; ballCenter = spherePos[3].xyz;}
+        else if (h4 && d[4] < d[5])                                             {distance = d[4]; collisionColor = sphereCol[4]; ballCenter = spherePos[4].xyz;}
+        else if (h5)                                                            {distance = d[5]; collisionColor = sphereCol[5]; ballCenter = spherePos[5].xyz;}
+        else if (rayDirection.y < 0.0)                                          {distance = (lStart.y + 2.7) / -rayDirection.y; ground = true;}
+        else return false;
+
+        intersectPosition   = lStart + distance * rayDirection;
+        instersectNormal    = intersectPosition - ballCenter;
+        if (ground){
             instersectNormal = vec3(0.0, 1.0, 0.0);
+            if (length(intersectPosition.xz) > 10.0) return false;
+
             if (fract(intersectPosition.x) > 0.5 == fract(intersectPosition.z) > 0.5)   collisionColor = vec3(1.0, 1.0, 1.0);
             else                                                                        collisionColor = vec3(0.5, 0.5, 0.0);
-        } else return false;
+
+        }
+
         endColour   += lightAt(instersectNormal, rayDirection, collisionColor);
         colM        *= mix(blandColour, collisionColor, 0.7);
         endColour   *= colM;
