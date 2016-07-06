@@ -112,14 +112,16 @@ void main(void) {
     spherePos[3].y = 2.2 + root2 + 4.0 * abs(sin(t * 0.05)); spherePos[3].w = 2.0;
 
     vec3 cameraDir = normalize(vPosition - cameraPostion);
-    vec3 intersectPosition1, intersectPosition2, intersectPosition3, dummy;
+    vec3 intersectPosition1, intersectPosition2, intersectPosition3,intersectPosition4, dummy;
     vec3 endColour, colMultiplier;
     endColour       = vec3(0.0, 0.0, 0.0);
     colMultiplier   = vec3(1.0, 1.0, 1.0);
     if (intersectWorld(cameraPostion, cameraDir, intersectPosition1, endColour, colMultiplier)) {
         if (intersectWorld(intersectPosition1, cameraDir, intersectPosition2, endColour, colMultiplier)) {
             if (intersectWorld(intersectPosition2, cameraDir, intersectPosition3, endColour, colMultiplier)) {
-                    intersectWorld(intersectPosition3, cameraDir, dummy, endColour, colMultiplier);
+                if (intersectWorld(intersectPosition3, cameraDir, intersectPosition4, endColour, colMultiplier)) {
+                    intersectWorld(intersectPosition4, cameraDir, dummy, endColour, colMultiplier);
+                }
             }
         }
     } else endColour = vec3(0.0, 0.0, 0.0);
