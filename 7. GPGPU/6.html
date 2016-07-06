@@ -3,7 +3,7 @@ What is aPlotPosition?
  -->
 <body></body>
 <script id="x-fragment" type="x-shader">
-    precision mediump float;
+    precision highp float;
     vec3 lightDir   = 1.07 * normalize(vec3(1.0, 1.0, -1.0));
     vec3 blandColour= 1.05 * normalize(vec3(1.0, 1.0, 1.0));
     float ambience  = 0.3;
@@ -11,8 +11,8 @@ What is aPlotPosition?
     float shinyness = 0.5;
     varying vec3 vPosition;
     varying vec3 cameraPostion;
-    varying vec4 spherePos1;
-    varying vec3 sphereCol1;
+    varying vec4 spherePos[2 + 1];
+    varying vec3 sphereCol[2 + 1];
 
     bool intersectSphere(vec4 sphere, vec3 rayStart, vec3 rayDirection, out float distance) {
         vec3    c = sphere.xyz - rayStart;
@@ -44,12 +44,16 @@ What is aPlotPosition?
     }
 
     bool intersectWorld(vec3 lStart, inout vec3 rayDirection, out vec3 intersectPosition, inout vec3 endColour, inout vec3 colMultiplier) {
-        float d[10], distance;
+        float d[2 + 1], distance;
         vec3 instersectNormal, collisionColor, ballCenter;
         bool ground = false;
-        bool h1 = intersectSphere(spherePos1, lStart, rayDirection, d[1]);
-             if (h1)                                                                                                                                        {distance = d[1]; collisionColor = sphereCol1; ballCenter = spherePos1.xyz;}
-        else if (rayDirection.y < 0.0)                                                                                                                      {distance = -lStart.y / rayDirection.y; ground = true;}
+        bool h0 = intersectSphere(spherePos[0], lStart, rayDirection, d[0]);
+        bool h1 = intersectSphere(spherePos[1], lStart, rayDirection, d[1]);
+        bool h2 = intersectSphere(spherePos[2], lStart, rayDirection, d[2]);
+             if (h2 && d[2] < d[1] && d[2] < d[0])  {distance = d[2]; collisionColor = sphereCol[2]; ballCenter = spherePos[2].xyz;}
+        else if (h1 && d[1] < d[0])                 {distance = d[1]; collisionColor = sphereCol[1]; ballCenter = spherePos[1].xyz;}
+        else if (h0)                                {distance = d[0]; collisionColor = sphereCol[0]; ballCenter = spherePos[0].xyz;}
+        else if (rayDirection.y < 0.0)              {distance = -lStart.y / rayDirection.y; ground = true;}
         // Our eye and objects are above the floor. Hence can't possibly intersect if ray going upwards
         else return false;
 
@@ -78,10 +82,13 @@ void main(void) {
     endColour       = vec3(0.0, 0.0, 0.0);
     colMultiplier   = vec3(1.0, 1.0, 1.0);
     if (intersectWorld(cameraPostion, cameraDir, intersectPosition1, endColour, colMultiplier)) {
-        gl_FragColor = vec4(endColour, 1.0);
-    } else {
-        gl_FragColor = vec4(0.0,0.0,0.0, 1.0);
-    }
+        if (intersectWorld(intersectPosition1, cameraDir, intersectPosition2, endColour, colMultiplier)) {
+            if (intersectWorld(intersectPosition2, cameraDir, intersectPosition3, endColour, colMultiplier)) {
+                    intersectWorld(intersectPosition3, cameraDir, dummy, endColour, colMultiplier);
+            }
+        }
+    } else endColour = vec3(0.0, 0.0, 0.0);
+    gl_FragColor = vec4(endColour, 1.0);
 }
 </script>
 <script id="x-vertex" type="x-shader">
@@ -90,17 +97,21 @@ void main(void) {
     uniform     float   u_ratio;
     varying     vec3    vPosition;
     varying     vec3    cameraPostion;
-    varying     vec4    spherePos1;
-    varying     vec3    sphereCol1;
+    varying     vec4    spherePos[2 + 1];
+    varying     vec3    sphereCol[2 + 1];
     #define     PI      3.14159265
     void main(void) {
         vec3 cameraTo   = vec3(0.0, 0.0, 0.0);
         vec3 up         = vec3(0.0, 1.0, 0.0);
         float cameraPersp = 5.0;
 
-        sphereCol1    = vec3(0.4, 0.4, 0.4);
+        sphereCol[0]    = vec3(0.4, 0.4, 0.7);
+        sphereCol[1]    = vec3(0.4, 0.4, 0.4);
+        sphereCol[2]    = vec3(0.0, 0.5, 0.5);
         cameraPostion   = vec3(+20.0 * sin(u_time * 0.003),              10.0 + 10.0 * sin(u_time * 0.002),      20.0 * cos(u_time * 0.001));
-        spherePos1    = vec4( +0.0,                                   +1.0 + 0.5 * abs(sin(u_time * 0.2)),    +0.0,                                   1.0);
+        spherePos[1]    = vec4( +0.0,                                   +1.0 + 0.5 * abs(sin(u_time * 0.2)),    +0.0,                                   1.0);
+        spherePos[2]    = vec4( +2.0 * cos(u_time * 0.015 + PI),        +1.0,                                   +2.0 * sin(u_time * 0.015 + PI),        1.0);
+        spherePos[0]    = vec4( +0.0,                                   +3.0 + 2.0 * abs(sin(u_time * 0.1)),    +0.0,                                   1.0);
 
         vec3 cameraDir  = normalize(cameraTo - cameraPostion);
         vec3 cameraLeft = normalize(cross(cameraDir, up));

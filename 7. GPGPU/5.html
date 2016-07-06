@@ -83,28 +83,27 @@ What is aPlotPosition?
         float d0,d1,d2,d3,d4,d5,d6,d7,d8,d9,distance;
         vec3 instersectNormal, collisionColor, ballCenter;
         bool ground = false;
-        // bool h0 = intersectSphere(spherePos0, lStart, rayDirection, d0);
+        bool h0 = intersectSphere(spherePos0, lStart, rayDirection, d0);
         bool h1 = intersectSphere(spherePos1, lStart, rayDirection, d1);
-        // bool h2 = intersectSphere(spherePos2, lStart, rayDirection, d2);
-        // bool h3 = intersectSphere(spherePos3, lStart, rayDirection, d3);
-        // bool h4 = intersectSphere(spherePos4, lStart, rayDirection, d4);
-        // bool h5 = intersectSphere(spherePos5, lStart, rayDirection, d5);
-        // bool h6 = intersectSphere(spherePos6, lStart, rayDirection, d6);
-        // bool h7 = intersectSphere(spherePos7, lStart, rayDirection, d7);
-        // bool h8 = intersectSphere(spherePos8, lStart, rayDirection, d8);
-        // bool h9 = intersectSphere(spherePos9, lStart, rayDirection, d9);
+        bool h2 = intersectSphere(spherePos2, lStart, rayDirection, d2);
+        bool h3 = intersectSphere(spherePos3, lStart, rayDirection, d3);
+        bool h4 = intersectSphere(spherePos4, lStart, rayDirection, d4);
+        bool h5 = intersectSphere(spherePos5, lStart, rayDirection, d5);
+        bool h6 = intersectSphere(spherePos6, lStart, rayDirection, d6);
+        bool h7 = intersectSphere(spherePos7, lStart, rayDirection, d7);
+        bool h8 = intersectSphere(spherePos8, lStart, rayDirection, d8);
+        bool h9 = intersectSphere(spherePos9, lStart, rayDirection, d9);
 
-        //      if (h0 && d0 < d9 && d0 < d8 && d0 < d7 && d0 < d6 && d0 < d5 && d0 < d4 && d0 < d3 && d0 < d2 && d0 < d1) {distance = d0; collisionColor = sphereCol0; ballCenter = spherePos0.xyz;}
-        // else if (h9 && d9 < d8 && d9 < d7 && d9 < d6 && d9 < d5 && d9 < d4 && d9 < d3 && d9 < d2 && d9 < d1)            {distance = d9; collisionColor = sphereCol9; ballCenter = spherePos9.xyz;}
-        // else if (h8 && d8 < d7 && d8 < d6 && d8 < d5 && d8 < d4 && d8 < d3 && d8 < d2 && d8 < d1)                       {distance = d8; collisionColor = sphereCol8; ballCenter = spherePos8.xyz;}
-        // else if (h7 && d7 < d6 && d7 < d5 && d7 < d4 && d7 < d3 && d7 < d2 && d7 < d1)                                  {distance = d7; collisionColor = sphereCol7; ballCenter = spherePos7.xyz;}
-        // else if (h6 && d6 < d5 && d6 < d4 && d6 < d3 && d6 < d2 && d6 < d1)                                             {distance = d6; collisionColor = sphereCol6; ballCenter = spherePos6.xyz;}
-        // else if (h5 && d5 < d4 && d5 < d3 && d5 < d2 && d5 < d1)                                                        {distance = d5; collisionColor = sphereCol5; ballCenter = spherePos5.xyz;}
-        // else if (h4 && d4 < d3 && d4 < d2 && d4 < d1)                                                                   {distance = d4; collisionColor = sphereCol4; ballCenter = spherePos4.xyz;}
-        // else if (h3 && d3 < d2 && d3 < d1)                                                                              {distance = d3; collisionColor = sphereCol3; ballCenter = spherePos3.xyz;}
-        // else if (h2 && d2 < d1)                                                                                         {distance = d2; collisionColor = sphereCol2; ballCenter = spherePos2.xyz;}
-             if (h1)                                                                                                    {distance = d1; collisionColor = sphereCol1; ballCenter = spherePos1.xyz;}
-        // else if (h1)                                                                                                    {distance = d1; collisionColor = sphereCol1; ballCenter = spherePos1.xyz;}
+             if (h0 && d0 < d9 && d0 < d8 && d0 < d7 && d0 < d6 && d0 < d5 && d0 < d4 && d0 < d3 && d0 < d2 && d0 < d1) {distance = d0; collisionColor = sphereCol0; ballCenter = spherePos0.xyz;}
+        else if (h9 && d9 < d8 && d9 < d7 && d9 < d6 && d9 < d5 && d9 < d4 && d9 < d3 && d9 < d2 && d9 < d1)            {distance = d9; collisionColor = sphereCol9; ballCenter = spherePos9.xyz;}
+        else if (h8 && d8 < d7 && d8 < d6 && d8 < d5 && d8 < d4 && d8 < d3 && d8 < d2 && d8 < d1)                       {distance = d8; collisionColor = sphereCol8; ballCenter = spherePos8.xyz;}
+        else if (h7 && d7 < d6 && d7 < d5 && d7 < d4 && d7 < d3 && d7 < d2 && d7 < d1)                                  {distance = d7; collisionColor = sphereCol7; ballCenter = spherePos7.xyz;}
+        else if (h6 && d6 < d5 && d6 < d4 && d6 < d3 && d6 < d2 && d6 < d1)                                             {distance = d6; collisionColor = sphereCol6; ballCenter = spherePos6.xyz;}
+        else if (h5 && d5 < d4 && d5 < d3 && d5 < d2 && d5 < d1)                                                        {distance = d5; collisionColor = sphereCol5; ballCenter = spherePos5.xyz;}
+        else if (h4 && d4 < d3 && d4 < d2 && d4 < d1)                                                                   {distance = d4; collisionColor = sphereCol4; ballCenter = spherePos4.xyz;}
+        else if (h3 && d3 < d2 && d3 < d1)                                                                              {distance = d3; collisionColor = sphereCol3; ballCenter = spherePos3.xyz;}
+        else if (h2 && d2 < d1)                                                                                         {distance = d2; collisionColor = sphereCol2; ballCenter = spherePos2.xyz;}
+        else if (h1)                                                                                                    {distance = d1; collisionColor = sphereCol1; ballCenter = spherePos1.xyz;}
         else if (rayDirection.y < 0.0)                                                                                  {distance = -lStart.y / rayDirection.y; ground = true;}
         // Our eye and objects are above the floor. Hence can't possibly intersect if ray going upwards
         else return false;
@@ -134,11 +133,11 @@ void main(void) {
     endColour       = vec3(0.0, 0.0, 0.0);
     colMultiplier   = vec3(1.0, 1.0, 1.0);
     if (intersectWorld(cameraPostion, cameraDir, intersectPosition1, endColour, colMultiplier)) {
-        // if (intersectWorld(intersectPosition1, cameraDir, intersectPosition2, endColour, colMultiplier)) {
-        //     if (intersectWorld(intersectPosition2, cameraDir, intersectPosition3, endColour, colMultiplier)) {
-        //             intersectWorld(intersectPosition3, cameraDir, dummy, endColour, colMultiplier);
-        //     }
-        // }
+        if (intersectWorld(intersectPosition1, cameraDir, intersectPosition2, endColour, colMultiplier)) {
+            if (intersectWorld(intersectPosition2, cameraDir, intersectPosition3, endColour, colMultiplier)) {
+                    intersectWorld(intersectPosition3, cameraDir, dummy, endColour, colMultiplier);
+            }
+        }
     } else endColour = vec3(0.0, 0.0, 0.0);
     gl_FragColor = vec4(endColour, 1.0);
 }
