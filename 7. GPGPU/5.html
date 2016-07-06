@@ -4,11 +4,11 @@ What is aPlotPosition?
 <body></body>
 <script id="x-fragment" type="x-shader">
     precision mediump float;
-    const   vec3 lightDir   = 1.07 * normalize(vec3(1.0, 1.0, -1.0));
-    const   vec3 blandColour= 1.05 * normalize(vec3(1.0, 1.0, 1.0));
-    const   float ambience  = 0.3;
-    const   float diffussion= 0.3;
-    const   float shinyness = 0.5;
+       vec3 lightDir   = 1.07 * normalize(vec3(1.0, 1.0, -1.0));
+       vec3 blandColour= 1.05 * normalize(vec3(1.0, 1.0, 1.0));
+       float ambience  = 0.3;
+       float diffussion= 0.3;
+       float shinyness = 0.5;
     varying vec3 vPosition;
     varying vec3 cameraPostion;
     varying vec4 spherePos[10];
@@ -87,6 +87,7 @@ What is aPlotPosition?
         else if (h2 && d[2] < d[1])                                                                                                                         {distance = d[2]; collisionColor = sphereCol[2]; ballCenter = spherePos[2].xyz;}
         else if (h1)                                                                                                                                        {distance = d[1]; collisionColor = sphereCol[1]; ballCenter = spherePos[1].xyz;}
         else if (rayDirection.y < 0.0)                                                                                                                      {distance = -lStart.y / rayDirection.y; ground = true;}
+        // Our eye and objects are above the floor. Hence can't possibly intersect if ray going upwards
         else return false;
 
         intersectPosition   = lStart + distance * rayDirection;
@@ -137,7 +138,6 @@ void main(void) {
         vec3 up         = vec3(0.0, 1.0, 0.0);
         float cameraPersp = 5.0;
 
-        cameraPostion   = vec3(sin(u_time * 0.003) * 20.0,      sin(u_time * 0.002) * 10.0 + 10.0,      cos(u_time * 0.001) * 20.0);
         sphereCol[1]    = vec3(0.4, 0.4, 0.4);
         sphereCol[4]    = vec3(0.8, 0.8, 0.8);
         sphereCol[2]    = vec3(0.0, 0.5, 0.5);
@@ -148,6 +148,7 @@ void main(void) {
         sphereCol[8]    = vec3(0.9, 0.6, 0.7);
         sphereCol[9]    = vec3(0.3, 0.6, 0.3);
         sphereCol[0]    = vec3(0.4, 0.4, 0.7);
+        cameraPostion   = vec3(+20.0 * sin(u_time * 0.003),              10.0 + 10.0 * sin(u_time * 0.002),      20.0 * cos(u_time * 0.001));
         spherePos[1]    = vec4( +0.0,                                   +1.0 + 0.5 * abs(sin(u_time * 0.2)),    +0.0,                                   1.0);
         spherePos[2]    = vec4( +2.0 * cos(u_time * 0.015 + PI),        +1.0,                                   +2.0 * sin(u_time * 0.015 + PI),        1.0);
         spherePos[4]    = vec4( +0.0,                                   +3.0 + 2.0 * abs(sin(u_time * 0.1)),    +0.0,                                   1.0);

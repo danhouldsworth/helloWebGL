@@ -6,6 +6,7 @@ Task
 3. Render the mandlebrot dwell as depth on a tilted square. THIS IS HARD - gl_pos.z comes from vertex shader. Dwell calced in frag shader. Need double post processing of texture?
 4. Render the complex analysis of the function f(x) = (x^2 − 1)(x − 2 − i)^2 / (x^2 + 2 + 2i). Hue represented by the function argument, and brightness represented by the magnitude.
 5. Render a reflective sphere by ray tracing in the fragment shader. Extend to multiple objects - transparent & reflective.
+6. See if can pinpoint the Safari lack of compatibility
 
 Notes:
 - Very useful summary of OpenGL ES2.0 issues vs OpenGL 3+ : http://www.atmind.nl/?p=623
