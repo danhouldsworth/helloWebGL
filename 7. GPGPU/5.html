@@ -4,15 +4,15 @@ What is aPlotPosition?
 <body></body>
 <script id="x-fragment" type="x-shader">
     precision highp float;
-    const   vec3 lightDir   = 1.1 * normalize(vec3(1.0, 1.0, -1.0));
-    const   vec3 blandColour= 1.1 * normalize(vec3(1.0, 1.0, 1.0));
-    const   float ambience  = 0.5;
+    const   vec3 lightDir   = 1.07 * normalize(vec3(1.0, 1.0, -1.0));
+    const   vec3 blandColour= 1.05 * normalize(vec3(1.0, 1.0, 1.0));
+    const   float ambience  = 0.3;
     const   float diffussion= 0.3;
-    const   float shinyness = 0.7;
+    const   float shinyness = 0.5;
     varying vec3 vPosition;
     varying vec3 cameraPostion;
-    varying vec4 spherePos[6];
-    varying vec3 sphereCol[6];
+    varying vec4 spherePos[10];
+    varying vec3 sphereCol[10];
 
     bool intersectSphere(vec4 sphere, vec3 rayStart, vec3 rayDirection, out float distance) {
         vec3    c = sphere.xyz - rayStart;
@@ -61,22 +61,32 @@ What is aPlotPosition?
         return saturation * color;
     }
 
-    bool intersectWorld(vec3 lStart, inout vec3 rayDirection, out vec3 intersectPosition, inout vec3 endColour, inout vec3 colM) {
-        float d[6], distance;
+    bool intersectWorld(vec3 lStart, inout vec3 rayDirection, out vec3 intersectPosition, inout vec3 endColour, inout vec3 colMultiplier) {
+        float d[10], distance;
         vec3 instersectNormal, collisionColor, ballCenter;
         bool ground = false;
+        bool h0 = intersectSphere(spherePos[0], lStart, rayDirection, d[0]);
         bool h1 = intersectSphere(spherePos[1], lStart, rayDirection, d[1]);
         bool h2 = intersectSphere(spherePos[2], lStart, rayDirection, d[2]);
         bool h3 = intersectSphere(spherePos[3], lStart, rayDirection, d[3]);
         bool h4 = intersectSphere(spherePos[4], lStart, rayDirection, d[4]);
         bool h5 = intersectSphere(spherePos[5], lStart, rayDirection, d[5]);
+        bool h6 = intersectSphere(spherePos[6], lStart, rayDirection, d[6]);
+        bool h7 = intersectSphere(spherePos[7], lStart, rayDirection, d[7]);
+        bool h8 = intersectSphere(spherePos[8], lStart, rayDirection, d[8]);
+        bool h9 = intersectSphere(spherePos[9], lStart, rayDirection, d[9]);
 
-        if      (h1 && d[1] < d[2] && d[1] < d[3] && d[1] < d[4] && d[1] < d[5]){distance = d[1]; collisionColor = sphereCol[1]; ballCenter = spherePos[1].xyz;}
-        else if (h2 && d[2] < d[3] && d[2] < d[4] && d[2] < d[5])               {distance = d[2]; collisionColor = sphereCol[2]; ballCenter = spherePos[2].xyz;}
-        else if (h3 && d[3] < d[4] && d[3] < d[5])                              {distance = d[3]; collisionColor = sphereCol[3]; ballCenter = spherePos[3].xyz;}
-        else if (h4 && d[4] < d[5])                                             {distance = d[4]; collisionColor = sphereCol[4]; ballCenter = spherePos[4].xyz;}
-        else if (h5)                                                            {distance = d[5]; collisionColor = sphereCol[5]; ballCenter = spherePos[5].xyz;}
-        else if (rayDirection.y < 0.0)                                          {distance = (lStart.y + 2.7) / -rayDirection.y; ground = true;}
+             if (h0 && d[0] < d[9] && d[0] < d[8] && d[0] < d[7] && d[0] < d[6] && d[0] < d[5] && d[0] < d[4] && d[0] < d[3] && d[0] < d[2] && d[0] < d[1]) {distance = d[0]; collisionColor = sphereCol[0]; ballCenter = spherePos[0].xyz;}
+        else if (h9 && d[9] < d[8] && d[9] < d[7] && d[9] < d[6] && d[9] < d[5] && d[9] < d[4] && d[9] < d[3] && d[9] < d[2] && d[9] < d[1])                {distance = d[9]; collisionColor = sphereCol[9]; ballCenter = spherePos[9].xyz;}
+        else if (h8 && d[8] < d[7] && d[8] < d[6] && d[8] < d[5] && d[8] < d[4] && d[8] < d[3] && d[8] < d[2] && d[8] < d[1])                               {distance = d[8]; collisionColor = sphereCol[8]; ballCenter = spherePos[8].xyz;}
+        else if (h7 && d[7] < d[6] && d[7] < d[5] && d[7] < d[4] && d[7] < d[3] && d[7] < d[2] && d[7] < d[1])                                              {distance = d[7]; collisionColor = sphereCol[7]; ballCenter = spherePos[7].xyz;}
+        else if (h6 && d[6] < d[5] && d[6] < d[4] && d[6] < d[3] && d[6] < d[2] && d[6] < d[1])                                                             {distance = d[6]; collisionColor = sphereCol[6]; ballCenter = spherePos[6].xyz;}
+        else if (h5 && d[5] < d[4] && d[5] < d[3] && d[5] < d[2] && d[5] < d[1])                                                                            {distance = d[5]; collisionColor = sphereCol[5]; ballCenter = spherePos[5].xyz;}
+        else if (h4 && d[4] < d[3] && d[4] < d[2] && d[4] < d[1])                                                                                           {distance = d[4]; collisionColor = sphereCol[4]; ballCenter = spherePos[4].xyz;}
+        else if (h3 && d[3] < d[2] && d[3] < d[1])                                                                                                          {distance = d[3]; collisionColor = sphereCol[3]; ballCenter = spherePos[3].xyz;}
+        else if (h2 && d[2] < d[1])                                                                                                                         {distance = d[2]; collisionColor = sphereCol[2]; ballCenter = spherePos[2].xyz;}
+        else if (h1)                                                                                                                                        {distance = d[1]; collisionColor = sphereCol[1]; ballCenter = spherePos[1].xyz;}
+        else if (rayDirection.y < 0.0)                                                                                                                      {distance = (lStart.y + 2.7) / -rayDirection.y; ground = true;}
         else return false;
 
         intersectPosition   = lStart + distance * rayDirection;
@@ -90,29 +100,27 @@ What is aPlotPosition?
 
         }
 
-        endColour   += lightAt(instersectNormal, rayDirection, collisionColor);
-        colM        *= mix(blandColour, collisionColor, 0.7);
-        endColour   *= colM;
+        endColour       += lightAt(instersectNormal, rayDirection, collisionColor);
+        endColour       *= colMultiplier;
+        colMultiplier   *= mix(blandColour, collisionColor, 0.7);
         rayDirection = reflect(rayDirection, instersectNormal);
         return true;
     }
 
 void main(void) {
     vec3 cameraDir = normalize(vPosition - cameraPostion);
-    vec3 intersectPosition1, intersectPosition2, intersectPosition3;
-    vec3 endColour, colM;
-    endColour               = vec3(0.0, 0.0, 0.0);
-    colM                    = vec3(1.0, 1.0, 1.0);
-    if (intersectWorld(cameraPostion, cameraDir, intersectPosition1, endColour, colM)) {
-        if (intersectWorld(intersectPosition1, cameraDir, intersectPosition2, endColour, colM)) {
-            if (intersectWorld(intersectPosition2, cameraDir, intersectPosition3, endColour, colM)) {
-                intersectWorld(intersectPosition3, cameraDir, intersectPosition1, endColour, colM);
+    vec3 intersectPosition1, intersectPosition2, intersectPosition3, dummy;
+    vec3 endColour, colMultiplier;
+    endColour       = vec3(0.0, 0.0, 0.0);
+    colMultiplier   = vec3(1.0, 1.0, 1.0);
+    if (intersectWorld(cameraPostion, cameraDir, intersectPosition1, endColour, colMultiplier)) {
+        if (intersectWorld(intersectPosition1, cameraDir, intersectPosition2, endColour, colMultiplier)) {
+            if (intersectWorld(intersectPosition2, cameraDir, intersectPosition3, endColour, colMultiplier)) {
+                    intersectWorld(intersectPosition3, cameraDir, dummy, endColour, colMultiplier);
             }
         }
-        gl_FragColor = vec4(endColour, 1.0);
-    } else {
-        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    }
+    } else endColour = vec3(0.0, 0.0, 0.0);
+    gl_FragColor = vec4(endColour, 1.0);
 }
 </script>
 <script id="x-vertex" type="x-shader">
@@ -121,26 +129,36 @@ void main(void) {
     uniform     float   u_ratio;
     varying     vec3    vPosition;
     varying     vec3    cameraPostion;
-    varying     vec4    spherePos[6];
-    varying     vec3    sphereCol[6];
+    varying     vec4    spherePos[10];
+    varying     vec3    sphereCol[10];
     #define     PI      3.14159265
     void main(void) {
         vec3 cameraTo   = vec3(0.0, 0.0, 0.0);
         vec3 up         = vec3(0.0, 1.0, 0.0);
         float cameraPersp = 5.0;
 
-        cameraPostion   = vec3(sin(u_time * 0.003) * 20.0,sin(u_time * 0.002) * 10.0 + 10.0,cos(u_time * 0.001) * 20.0);
-        sphereCol[1]   = vec3(0.5, 0.5, 0.5);
-        sphereCol[2]   = vec3(1.0, 1.0, 1.0);
-        sphereCol[3]   = vec3(0.0, 0.0, 0.0);
-        sphereCol[4]   = vec3(0.5, 0.0, 0.0);
-        sphereCol[5]   = vec3(0.0, 0.5, 0.5);
-        spherePos[1]   = vec4( +0.0,                         -2.0 + 0.5 * abs(sin(u_time * 0.2)),    +0.0,                       1.0);
-        spherePos[2]   = vec4( +2.0 * cos(u_time * 0.03),    -1.9,                                   +2.0 * sin(u_time * 0.03),  1.0);
-        spherePos[3]   = vec4( +4.0 * sin(u_time * 0.02),    -1.9,                                   +4.0 * cos(u_time * 0.02),  1.0);
-        spherePos[4]   = vec4( +2.0 * sin(u_time * 0.06),    +0.5 * abs(sin(u_time * 0.2)),          +2.0 * cos(u_time * 0.06),  0.0) + spherePos[3];
-        spherePos[5]   = vec4( +0.0,                         +2.0 * abs(sin(u_time * 0.1)),          +0.0,                       1.0);
-
+        cameraPostion   = vec3(sin(u_time * 0.003) * 20.0,      sin(u_time * 0.002) * 10.0 + 10.0,      cos(u_time * 0.001) * 20.0);
+        sphereCol[1]    = vec3(0.4, 0.4, 0.4);
+        sphereCol[4]    = vec3(0.8, 0.8, 0.8);
+        sphereCol[2]    = vec3(0.0, 0.5, 0.5);
+        sphereCol[5]    = vec3(0.9, 0.9, 0.5);
+        sphereCol[6]    = vec3(0.2, 0.3, 0.5);
+        sphereCol[3]    = vec3(0.1, 0.1, 0.1);
+        sphereCol[7]    = vec3(0.6, 0.2, 0.2);
+        sphereCol[8]    = vec3(0.9, 0.6, 0.7);
+        sphereCol[9]    = vec3(0.3, 0.6, 0.3);
+        sphereCol[0]    = vec3(0.4, 0.4, 0.7);
+        spherePos[1]    = vec4( +0.0,                                   -2.0 + 0.5 * abs(sin(u_time * 0.2)),    +0.0,                                   1.0);
+        spherePos[2]    = vec4( +2.0 * cos(u_time * 0.015 + PI),        -2.0,                                   +2.0 * sin(u_time * 0.015 + PI),        1.0);
+        spherePos[4]    = vec4( +0.0,                                   +2.0 * abs(sin(u_time * 0.1)),          +0.0,                                   1.0);
+        spherePos[5]    = vec4( +2.0 * cos(u_time * 0.015 + PI*0.5),    -2.0,                                   +2.0 * sin(u_time * 0.015 + PI*0.5),    1.0);
+        spherePos[6]    = vec4( +2.0 * cos(u_time * 0.015 + PI*1.5),    -2.0,                                   +2.0 * sin(u_time * 0.015 + PI*1.5),    1.0);
+        float   sep = 1.7 + 0.3*sin(u_time * 0.03); // Roughtly between root(2) < sep < 2.0
+        spherePos[3]    = vec4( +4.0 * cos(u_time * 0.015),             -1.27 + 0.73 * sin(u_time * 0.03 + PI),         +4.0 * sin(u_time * 0.015),             1.0);
+        spherePos[7]    = vec4( sep * sin(u_time * 0.015),              0.0,                                    sep * cos(u_time * 0.015),              0.0) + spherePos[3]; spherePos[7].y = -2.0;
+        spherePos[8]    = vec4( sep * sin(u_time * 0.015 + PI),         0.0,                                    sep * cos(u_time * 0.015 + PI),         0.0) + spherePos[3]; spherePos[8].y = -2.0;
+        spherePos[9]    = vec4( sep * sin(u_time * 0.015 + PI*0.5),     0.0,                                    sep * cos(u_time * 0.015 + PI*0.5),     0.0) + spherePos[3]; spherePos[9].y = -2.0;
+        spherePos[0]    = vec4( sep * sin(u_time * 0.015 + PI*1.5),     0.0,                                    sep * cos(u_time * 0.015 + PI*1.5),     0.0) + spherePos[3]; spherePos[0].y = -2.0;
         vec3 cameraDir  = normalize(cameraTo - cameraPostion);
         vec3 cameraLeft = normalize(cross(cameraDir, up));
         vec3 cameraUp   = normalize(cross(cameraLeft, cameraDir));
