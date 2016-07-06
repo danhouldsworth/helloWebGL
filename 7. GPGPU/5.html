@@ -86,7 +86,7 @@ What is aPlotPosition?
         else if (h3 && d[3] < d[2] && d[3] < d[1])                                                                                                          {distance = d[3]; collisionColor = sphereCol[3]; ballCenter = spherePos[3].xyz;}
         else if (h2 && d[2] < d[1])                                                                                                                         {distance = d[2]; collisionColor = sphereCol[2]; ballCenter = spherePos[2].xyz;}
         else if (h1)                                                                                                                                        {distance = d[1]; collisionColor = sphereCol[1]; ballCenter = spherePos[1].xyz;}
-        else if (rayDirection.y < 0.0)                                                                                                                      {distance = (lStart.y + 2.7) / -rayDirection.y; ground = true;}
+        else if (rayDirection.y < 0.0)                                                                                                                      {distance = -lStart.y / rayDirection.y; ground = true;}
         else return false;
 
         intersectPosition   = lStart + distance * rayDirection;
@@ -148,18 +148,18 @@ void main(void) {
         sphereCol[8]    = vec3(0.9, 0.6, 0.7);
         sphereCol[9]    = vec3(0.3, 0.6, 0.3);
         sphereCol[0]    = vec3(0.4, 0.4, 0.7);
-        spherePos[1]    = vec4( +0.0,                                   -2.0 + 0.5 * abs(sin(u_time * 0.2)),    +0.0,                                   1.0);
-        spherePos[2]    = vec4( +2.0 * cos(u_time * 0.015 + PI),        -2.0,                                   +2.0 * sin(u_time * 0.015 + PI),        1.0);
-        spherePos[4]    = vec4( +0.0,                                   +2.0 * abs(sin(u_time * 0.1)),          +0.0,                                   1.0);
-        spherePos[5]    = vec4( +2.0 * cos(u_time * 0.015 + PI*0.5),    -2.0,                                   +2.0 * sin(u_time * 0.015 + PI*0.5),    1.0);
-        spherePos[6]    = vec4( +2.0 * cos(u_time * 0.015 + PI*1.5),    -2.0,                                   +2.0 * sin(u_time * 0.015 + PI*1.5),    1.0);
-        float   sep = 1.7 + 0.3*sin(u_time * 0.03); // Roughtly between root(2) < sep < 2.0
-        sep = 1.41;
-        spherePos[3]    = vec4( +3.41 * cos(u_time * 0.015),             -2.0 + sep,         +3.41 * sin(u_time * 0.015),             1.0);
-        spherePos[7]    = vec4( sep * sin(u_time * 0.015),              0.0,                                    sep * cos(u_time * 0.015),              0.0) + spherePos[3]; spherePos[7].y = -2.0;
-        spherePos[8]    = vec4( sep * sin(u_time * 0.015 + PI),         0.0,                                    sep * cos(u_time * 0.015 + PI),         0.0) + spherePos[3]; spherePos[8].y = -2.0;
-        spherePos[9]    = vec4( sep * sin(u_time * 0.015 + PI*0.5),     0.0,                                    sep * cos(u_time * 0.015 + PI*0.5),     0.0) + spherePos[3]; spherePos[9].y = -2.0;
-        spherePos[0]    = vec4( sep * sin(u_time * 0.015 + PI*1.5),     0.0,                                    sep * cos(u_time * 0.015 + PI*1.5),     0.0) + spherePos[3]; spherePos[0].y = -2.0;
+        spherePos[1]    = vec4( +0.0,                                   +1.0 + 0.5 * abs(sin(u_time * 0.2)),    +0.0,                                   1.0);
+        spherePos[2]    = vec4( +2.0 * cos(u_time * 0.015 + PI),        +1.0,                                   +2.0 * sin(u_time * 0.015 + PI),        1.0);
+        spherePos[4]    = vec4( +0.0,                                   +3.0 + 2.0 * abs(sin(u_time * 0.1)),    +0.0,                                   1.0);
+        spherePos[5]    = vec4( +2.0 * cos(u_time * 0.015 + PI*0.5),    +1.0,                                   +2.0 * sin(u_time * 0.015 + PI*0.5),    1.0);
+        spherePos[6]    = vec4( +2.0 * cos(u_time * 0.015 + PI*1.5),    +1.0,                                   +2.0 * sin(u_time * 0.015 + PI*1.5),    1.0);
+        float sep = 1.41;
+        spherePos[3]    = vec4( +3.41 * cos(u_time * 0.015),             +1.0 + sep,                            +3.41 * sin(u_time * 0.015),            1.0);
+        spherePos[7]    = vec4( sep * sin(u_time * 0.015),              -sep,                                    sep * cos(u_time * 0.015),              0.0) + spherePos[3];
+        spherePos[8]    = vec4( sep * sin(u_time * 0.015 + PI),         -sep,                                    sep * cos(u_time * 0.015 + PI),         0.0) + spherePos[3];
+        spherePos[9]    = vec4( sep * sin(u_time * 0.015 + PI*0.5),     -sep,                                    sep * cos(u_time * 0.015 + PI*0.5),     0.0) + spherePos[3];
+        spherePos[0]    = vec4( sep * sin(u_time * 0.015 + PI*1.5),     -sep,                                    sep * cos(u_time * 0.015 + PI*1.5),     0.0) + spherePos[3];
+
         vec3 cameraDir  = normalize(cameraTo - cameraPostion);
         vec3 cameraLeft = normalize(cross(cameraDir, up));
         vec3 cameraUp   = normalize(cross(cameraLeft, cameraDir));
