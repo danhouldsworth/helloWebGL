@@ -3,7 +3,7 @@ What is aPlotPosition?
  -->
 <body></body>
 <script id="x-fragment" type="x-shader">
-    precision highp float;
+    precision mediump float;
     const   vec3 lightDir   = 1.07 * normalize(vec3(1.0, 1.0, -1.0));
     const   vec3 blandColour= 1.05 * normalize(vec3(1.0, 1.0, 1.0));
     const   float ambience  = 0.3;
@@ -154,7 +154,8 @@ void main(void) {
         spherePos[5]    = vec4( +2.0 * cos(u_time * 0.015 + PI*0.5),    -2.0,                                   +2.0 * sin(u_time * 0.015 + PI*0.5),    1.0);
         spherePos[6]    = vec4( +2.0 * cos(u_time * 0.015 + PI*1.5),    -2.0,                                   +2.0 * sin(u_time * 0.015 + PI*1.5),    1.0);
         float   sep = 1.7 + 0.3*sin(u_time * 0.03); // Roughtly between root(2) < sep < 2.0
-        spherePos[3]    = vec4( +4.0 * cos(u_time * 0.015),             -1.27 + 0.73 * sin(u_time * 0.03 + PI),         +4.0 * sin(u_time * 0.015),             1.0);
+        sep = 1.41;
+        spherePos[3]    = vec4( +3.41 * cos(u_time * 0.015),             -2.0 + sep,         +3.41 * sin(u_time * 0.015),             1.0);
         spherePos[7]    = vec4( sep * sin(u_time * 0.015),              0.0,                                    sep * cos(u_time * 0.015),              0.0) + spherePos[3]; spherePos[7].y = -2.0;
         spherePos[8]    = vec4( sep * sin(u_time * 0.015 + PI),         0.0,                                    sep * cos(u_time * 0.015 + PI),         0.0) + spherePos[3]; spherePos[8].y = -2.0;
         spherePos[9]    = vec4( sep * sin(u_time * 0.015 + PI*0.5),     0.0,                                    sep * cos(u_time * 0.015 + PI*0.5),     0.0) + spherePos[3]; spherePos[9].y = -2.0;
