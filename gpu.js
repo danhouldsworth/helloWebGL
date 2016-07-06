@@ -8,7 +8,8 @@ var serveHTTP = function (req, res) {
     	case "/lolipop" :
     	case "/GPUandMultiTouchSprint" 		: res.end(fs.readFileSync("7. GPGPU/4.html")); break;
     	case "/Ray" :
-    	case "/RayTrace_iOSfragShadeBreaks" 	: res.end(fs.readFileSync("7. GPGPU/5.html")); break;
+    	case "/RayTrace_iOSfragShadeBreaks" : res.end(fs.readFileSync("7. GPGPU/5.html")); break;
+    	case "/ray2" 						: res.end(fs.readFileSync("7. GPGPU/6.html")); break;
     	// case "RayTrace_iOSfragShadeBreaks" : res.end(fs.readFileSync("7. GPGPU/5.html")); break;
     	default : res.end("Nope - this is a secure sprint test server for internal use only, so can't let you search. Good bye robots.");
     }
