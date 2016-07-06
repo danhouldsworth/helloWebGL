@@ -10,21 +10,12 @@ Task
 
 Notes:
 - Very useful summary of OpenGL ES2.0 issues vs OpenGL 3+ : http://www.atmind.nl/?p=623
-eg. while(){} loops not allowed. for(){} loops only allowed under much stricter index conditions
-*No LOOPS at all on iOS - they crash that instance of the frag shader*
-Notice - that lowp, mediump, highp made a difference to the distortion.
-Also - The loops for banding on complex lolipop seemed to work on even / odd iterations??
-[https://en.wikipedia.org/wiki/Complex_analysis#/media/File:Color_complex_plot.jpg]
-ALSO - array indexing NOT allowed for anything other than CONST in WebGL/GLES2
-SAFARI Doesn't support 'const' declarations
-iOS NEEDS high precision
-Turns out iOS CAN support array indices
-
-The limit is the number of varyings. Circa 28 floats. But doesn't exactly tally when as vec3 etc
-
-Q. It constrasting ES2.0 & ESSL vs OpenGL & GLSL - is it just that :
- - a subset of the system calls & syntax is allowable OR
- - that it is slower on the same hardware?
+1. while(){} loops not allowed. for(){} loops only allowed under much stricter index conditions
+	*No LOOPS at all on iOS - they crash that instance of the frag shader* (The loops for banding on complex lolipop seemed to work on even / odd iterations??)
+2. Array indexing NOT allowed for anything other than a constant at compile time in WebGL/GLES2
+3. Safari & iOS doesn't support 'const' declarations
+4. iOS needs highp for raytrace
+5. Smaller GPU's limit the number / size of varyings bandwidth between shaders. Circa 28 floats. But doesn't exactly tally when as vec3 etc
 
 
 https://www.khronos.org/files/webgl/webgl-reference-card-1_0.pdf
