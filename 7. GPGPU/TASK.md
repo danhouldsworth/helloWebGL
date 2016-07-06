@@ -17,11 +17,15 @@ Also - The loops for banding on complex lolipop seemed to work on even / odd ite
 [https://en.wikipedia.org/wiki/Complex_analysis#/media/File:Color_complex_plot.jpg]
 ALSO - array indexing NOT allowed for anything other than CONST in WebGL/GLES2
 SAFARI Doesn't support 'const' declarations
-
+iOS NEEDS high precision
 Turns out iOS CAN support array indices
+
+The limit is the number of varyings. Circa 28 floats. But doesn't exactly tally when as vec3 etc
 
 Q. It constrasting ES2.0 & ESSL vs OpenGL & GLSL - is it just that :
  - a subset of the system calls & syntax is allowable OR
  - that it is slower on the same hardware?
 
 
+https://www.khronos.org/files/webgl/webgl-reference-card-1_0.pdf
+http://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
