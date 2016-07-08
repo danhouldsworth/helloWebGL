@@ -3,6 +3,16 @@ var serveHTTP = function (req, res) {
 	console.log(req.url);
 	res.writeHead(200);
     switch (req.url){
+    	case "/test.jpg" 					: res.end(fs.readFileSync("5. Textures/test.jpg")); break;
+    	case "/logo.png" 					: res.end(fs.readFileSync("5. Textures/logo.png")); break;
+    	case "/tex1" 						: res.end(fs.readFileSync("5. Textures/1.html")); break;
+    	case "/tex1a" 						: res.end(fs.readFileSync("5. Textures/1a.html")); break;
+    	case "/tex1b" 						: res.end(fs.readFileSync("5. Textures/1b.html")); break;
+    	case "/tex2" 						: res.end(fs.readFileSync("5. Textures/2.html")); break;
+    	case "/tex2b" 						: res.end(fs.readFileSync("5. Textures/2b.html")); break;
+    	case "/tex3" 						: res.end(fs.readFileSync("5. Textures/3.html")); break;
+    	case "/tex3b" 						: res.end(fs.readFileSync("5. Textures/3b.html")); break;
+    	case "/tex4" 						: res.end(fs.readFileSync("5. Textures/4.html")); break;
     	case "/mandy" :
     	case "/loopsInShaderBreakiOS" 		: res.end(fs.readFileSync("7. GPGPU/2.html")); break;
     	case "/lolipop" :

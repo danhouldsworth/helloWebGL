@@ -25,3 +25,5 @@ Set some increasingly less trivial tasks / challenges to take us towards more re
 - Very useful summary of OpenGL ES2.0 issues vs OpenGL 3+ : http://www.atmind.nl/?p=623
 
 https://www.khronos.org/files/webgl/webgl-reference-card-1_0.pdf
+
+https://www.shadertoy.com/

@@ -11,3 +11,6 @@ Task
 
 https://www.khronos.org/files/webgl/webgl-reference-card-1_0.pdf
 http://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
+
+http://math.hws.edu/graphicsbook/c8/s1.html
+http://math.hws.edu/graphicsbook/c8/s2.html

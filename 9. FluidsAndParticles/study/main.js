@@ -284,16 +284,14 @@ function setup(width, height, singleComponentFboFormat){
     };
 }
 
-if (gl) {
-    loader.load([
-        'shaders/advect.frag',
-        'shaders/addForce.frag',
-        'shaders/divergence.frag',
-        'shaders/jacobi.frag',
-        'shaders/subtractPressureGradient.frag',
-        'shaders/visualize.frag',
-        'shaders/cursor.vertex',
-        'shaders/boundary.vertex',
-        'shaders/kernel.vertex'
-    ], init);
-}
+loader.load([
+    'shaders/advect.frag',
+    'shaders/addForce.frag',
+    'shaders/divergence.frag',
+    'shaders/jacobi.frag',
+    'shaders/subtractPressureGradient.frag',
+    'shaders/visualize.frag',
+    'shaders/cursor.vertex',
+    'shaders/boundary.vertex',
+    'shaders/kernel.vertex'
+], init);
