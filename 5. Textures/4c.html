@@ -1,0 +1,134 @@
+<!-- LOCAL FILE ACCESS NEEDED /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --allow-file-access-from-files -->
+<body></body>
+<script type="x-shader/x-vertex" id="x-vertex">
+    attribute   vec2 a_texCoord;
+    attribute   vec2 a_coordinates;
+
+    varying     vec2 v_texCoord;
+
+    void main(void) {
+        gl_Position = vec4(a_coordinates, 0.0, 1.0);
+        v_texCoord  = a_texCoord;
+    }
+</script>
+<script type="x-shader/x-fragment" id="guassianFrag">
+    precision   mediump     float;
+    uniform     sampler2D   u_image;
+    uniform     vec2        u_textureSize;
+    varying     vec2        v_texCoord;
+    void main(void) {
+        vec2 onePixel = vec2(1) / u_textureSize;
+        gl_FragColor  =(texture2D(u_image, v_texCoord + vec2(+onePixel.x, +onePixel.y)) +
+                        texture2D(u_image, v_texCoord + vec2(+onePixel.x, -onePixel.y)) +
+                        texture2D(u_image, v_texCoord + vec2(+onePixel.x, 0.0)) +
+                        texture2D(u_image, v_texCoord + vec2(-onePixel.x, +onePixel.y)) +
+                        texture2D(u_image, v_texCoord + vec2(-onePixel.x, -onePixel.y)) +
+                        texture2D(u_image, v_texCoord + vec2(-onePixel.x, 0.0)) +
+                        texture2D(u_image, v_texCoord + vec2(0.0, +onePixel.y)) +
+                        texture2D(u_image, v_texCoord + vec2(0.0, -onePixel.y))
+                        ) / 8.0;
+        // gl_FragColor = texture2D(u_image, v_texCoord);
+    }
+</script>
+<script type="x-shader/x-fragment" id="colourChannelsFrag">
+    precision   mediump     float;
+    uniform     sampler2D   u_image;
+    varying     vec2        v_texCoord;
+    void main(void) {
+        gl_FragColor = texture2D(u_image, v_texCoord);
+        float temp = gl_FragColor.r;
+        gl_FragColor.r = gl_FragColor.g;
+        gl_FragColor.g = gl_FragColor.b;
+        gl_FragColor.b = temp;
+    }
+</script>
+<script type="text/javascript">
+    var canvas  = document.createElement("canvas");
+    canvas.width = canvas.height = 1000;
+    var gl      = canvas.getContext("webgl");                                   // viewport is set at this point. So if resize, must reset viewport
+    document.body.appendChild(canvas);
+
+    var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, document.getElementById("x-vertex").text);
+    gl.compileShader(vertexShader);
+    var colourChannelsFrag = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(colourChannelsFrag, document.getElementById("colourChannelsFrag").text);
+    gl.compileShader(colourChannelsFrag);
+    var guassianFrag = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(guassianFrag, document.getElementById("guassianFrag").text);
+    gl.compileShader(guassianFrag);
+
+    if(!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS))         {console.log(gl.getShaderInfoLog(vertexShader));        throw "vertexShader failed";}
+    if(!gl.getShaderParameter(guassianFrag, gl.COMPILE_STATUS))         {console.log(gl.getShaderInfoLog(guassianFrag));        throw "guassianFrag failed";}
+    if(!gl.getShaderParameter(colourChannelsFrag, gl.COMPILE_STATUS))   {console.log(gl.getShaderInfoLog(colourChannelsFrag));  throw "colourChannelsFrag failed";}
+
+    var guassianProgram = gl.createProgram();
+    gl.attachShader(guassianProgram, vertexShader);
+    gl.attachShader(guassianProgram, guassianFrag);
+    gl.linkProgram( guassianProgram);
+    var colourChannelProgram = gl.createProgram();
+    gl.attachShader(colourChannelProgram, vertexShader);
+    gl.attachShader(colourChannelProgram, guassianFrag);
+    gl.linkProgram( colourChannelProgram);
+
+    gl.useProgram(  colourChannelProgram);
+    init();
+
+    gl.useProgram(  guassianProgram);
+    init();
+
+    var t=0;
+    var processedImage;
+    var image = new Image();
+    image.src = "test.jpg";
+    image.onload = function() {
+        gl.useProgram(guassianProgram);
+        gl.uniform2fv(gl.getUniformLocation(guassianProgram, "u_textureSize"), [image.width, image.height]);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+        processedImage = new Uint8Array(4 * canvas.width * canvas.height);
+        function drawScene() {
+            gl.useProgram(  guassianProgram);
+            gl.uniform1f(gl.getUniformLocation(guassianProgram, "t"), t++);
+            gl.drawElements(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_BYTE, 0);
+            gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, processedImage);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, processedImage);
+            // gl.useProgram(  colourChannelProgram);
+            // gl.drawElements(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_BYTE, 0);
+            // gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, processedImage);
+            // gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, canvas.width, canvas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, processedImage);
+            window.requestAnimationFrame(drawScene);
+            // setTimeout(drawScene, 500);
+        }
+        drawScene();
+    }
+function init(){
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -1.0,    +1.0,
+        +1.0,    +1.0,
+        -1.0,    -1.0,
+        +1.0,    -1.0
+        ]), gl.STATIC_DRAW);
+    gl.vertexAttribPointer(     gl.getAttribLocation(guassianProgram, "a_coordinates"), 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray( gl.getAttribLocation(guassianProgram, "a_coordinates"));
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array([0,1,2,3]), gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        0.0,  1.0,
+        1.0,  1.0,
+        0.0,  0.0,
+        1.0,  0.0
+        ]), gl.STATIC_DRAW);
+    gl.bindTexture(     gl.TEXTURE_2D, gl.createTexture());
+    gl.texParameteri(   gl.TEXTURE_2D, gl.TEXTURE_WRAP_S,       gl.CLAMP_TO_EDGE);
+    gl.texParameteri(   gl.TEXTURE_2D, gl.TEXTURE_WRAP_T,       gl.CLAMP_TO_EDGE);
+    gl.texParameteri(   gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,   gl.NEAREST);
+    gl.texParameteri(   gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER,   gl.NEAREST);
+    gl.enableVertexAttribArray( gl.getAttribLocation( guassianProgram, "a_texCoord"));
+    gl.vertexAttribPointer(     gl.getAttribLocation( guassianProgram, "a_texCoord"), 2, gl.FLOAT, false, 0, 0);
+}
+
+</script>
