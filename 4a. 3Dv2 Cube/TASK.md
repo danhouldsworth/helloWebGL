@@ -24,12 +24,17 @@ http://www.kamaron.me/webgl-tutorial/02-rotating-cube
 
 Maybe just reverse engineer ? eg. http://www.kamaron.me/tutorial-live/webgl/02-rotating-cube/
 
+iTask
+1. Get running standalone
+2. Inline dependency functions
+
+
 OR
 
 glutils is much briefer
 https://github.com/mdn/webgl-examples/blob/gh-pages/tutorial/glUtils.js
 And works : https://mdn.github.io/webgl-examples/tutorial/sample5/
-Take it back - has another much larger dependency
+Take it back - has another much larger dependency slyvester
 
 Or give up and go to three.js
 https://threejs.org/examples/#canvas_geometry_cube
