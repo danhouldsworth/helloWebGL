@@ -23,6 +23,7 @@ Set some increasingly less-trivial challenges that ultimately take me towards re
 8. If using readPixel / ArrayBuffer / Texture - then we shouldn't invert our y coords, as of course all of our array indices (both in shaders and JS) will be orientated the same. Unlike images and canvas coords which need inverted y.
 9. Can't use *int*s inside shaders, and *switch / case* does not allow floats. "The attribute qualifier can be used only with the data types float, vec2, vec3, vec4, mat2, mat3, and mat4. Attribute variables cannot be declared as arrays or structures."
 10. Errors are often misleading / not covered in forums. eg "INVALID_VALUE: vertexAttribPointer: index out of range" / "INVALID_VALUE: enableVertexAttribArray: index out of range" also arises simply when the attribute isn't being consumed
+11. I've been getting away with 0 stride in vertexAttribPointer, yet "If stride is 0, the generic vertex attributes are understood to be tightly packed in the array." Stride is in bytes, and arrays normally Float32Array, so actually a vec3 has a stride of 12!
 
 # Helpful links :
 http://www.atmind.nl/?p=623 (A very useful summary of OpenGL ES2.0 issues vs OpenGL 3+)

@@ -94,32 +94,11 @@ gl.vertexAttribPointer(
 );
 gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, 'vertColor'));
 
-let worldMatrix = new Float32Array(4 * 4);
-let viewMatrix 	= new Float32Array(4 * 4);
-let projMatrix 	= new Float32Array(4 * 4);
-mat4.identity(worldMatrix);
-mat4.lookAt(viewMatrix, [0, 0, -8], [0, 0, 0], [0, 1, 0]);
-mat4.perspective(projMatrix, glMatrix.toRadian(45), canvas.width / canvas.height, 0.1, 1000.0);
-
-gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'mWorld'), 	false, worldMatrix);
-gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'mView'), 	false, viewMatrix);
-gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'mProj'), 	false, projMatrix);
-
-var xRotationMatrix = new Float32Array(4 * 4);
-var yRotationMatrix = new Float32Array(4 * 4);
-
-//
-// Main render loop
-//
-var identityMatrix = new Float32Array(4 * 4);
-mat4.identity(identityMatrix);
-var angle = 0;
+var angle;
 var loop = function () {
-	angle = Date.now() / 500 / 6 * 2 * Math.PI;
-	mat4.rotate(yRotationMatrix, identityMatrix, angle, [0, 1, 0]);
-	mat4.rotate(xRotationMatrix, identityMatrix, angle / 4, [1, 0, 0]);
-	mat4.mul(worldMatrix, yRotationMatrix, xRotationMatrix);
-	gl.uniformMatrix4fv(gl.getUniformLocation(shaderProgram, 'mWorld'), false, worldMatrix);
+	angle = performance.now() / 2000 * 2 * Math.PI;
+
+	gl.uniform1f(gl.getUniformLocation(shaderProgram, "uA"), angle);
 
 	gl.clearColor(0.5, 0.5, 0.5, 0.5);
 	gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
