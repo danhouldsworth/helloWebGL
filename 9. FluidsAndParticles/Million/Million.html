@@ -1,0 +1,123 @@
+<!DOCTYPE html><html lang="en"><head>
+
+<script id="fs_setup" type="x-shader/x-fragment" charset="UTF-8">
+    precision highp float;
+
+    const float UNIT = 10000.0;
+
+    const float PI = 3.14159265359;
+
+    float rand(vec2 p){
+        return fract(sin(dot(p ,vec2(12.9898,78.233))) * 43758.5453);
+    }
+
+    uniform float ran;
+    uniform float size;
+
+    varying vec2 vUv;
+
+    void main(void){
+    	float i = vUv.x * size + vUv.y;
+    	float rad = i * PI;
+
+    	float px = rand(vUv * ran * 2.0) * 2.0 - 1.0;
+    	float py = rand(vUv * ran * 4.0) * 2.0 - 1.0;
+    	px = px * 100.0 / UNIT * cos(rad);
+    	py = py * 100.0 / UNIT * sin(rad);
+    	px = px / 2.0 + 0.5;
+    	py = py / 2.0 + 0.5;
+
+    	float vx = rand(vUv * ran * 8.0) * 2.0 - 1.0;
+    	float vy = rand(vUv * ran * 16.0) * 2.0 - 1.0;
+    	vx = vx * 10.0 / UNIT * cos(rad);
+    	vy = vy * 10.0 / UNIT * sin(rad);
+    	vx = vx / 2.0 + 0.5;
+    	vy = vy / 2.0 + 0.5;
+
+    	gl_FragColor = vec4(px, py, vx, vy);
+    }
+</script>
+
+<script id="vs_common" type="x-shader/x-vertex" charset="UTF-8">
+    precision highp float;
+
+    attribute vec2  aPosition;
+    attribute vec2  aUv;
+
+    varying vec2    vUv;
+
+    void main(void) {
+        vUv         = aUv;
+        gl_Position = vec4(aPosition, 0.0, 1.0);
+    }
+</script>
+<script id="fs_calc" type="x-shader/x-fragment" charset="UTF-8">
+    precision highp float;
+
+    const float UNIT    = 10000.0;
+
+    uniform vec2        canvasSize;
+    uniform sampler2D   texture;
+
+    varying vec2        vUv;
+
+    void main(void) {
+
+    	vec4 node = UNIT * (texture2D(texture, vUv) * 2.0 - 1.0);
+
+    	node.xy += node.zw;
+    	if (node.x > canvasSize.x) {
+    		node.x = canvasSize.x;
+    		node.z *= -1.0;
+    	} else if (node.x < -canvasSize.x) {
+    		node.x = -canvasSize.x;
+    		node.z *= -1.0;
+    	}
+    	if (node.y > canvasSize.y) {
+    		node.y = canvasSize.y;
+    		node.w *= -1.0;
+    	} else if (node.y < -canvasSize.y) {
+    		node.y = -canvasSize.y;
+    		node.w *= -1.0;
+    	}
+
+    	node = node / UNIT / 2.0 + 0.5;
+    	gl_FragColor = node;
+    }
+</script>
+
+
+<script id="vs_draw" type="x-shader/x-vertex" charset="UTF-8">
+    precision highp float;
+
+    const float UNIT = 10000.0;
+
+    attribute float     aIndex;
+
+    uniform sampler2D   texture;
+    uniform float       size;
+    uniform vec2        canvasSize;
+
+    void main(void) {
+        vec2 stateCoord = vec2((mod(aIndex, size)) / size, (floor(aIndex / size)) / size);
+        vec4 node       = texture2D(texture, stateCoord) * 2.0 - 1.0;
+
+        node.xy     = node.xy * UNIT / canvasSize;
+
+        gl_Position = vec4(node.xy, 0.0, 1.0);
+        gl_PointSize= 2.0;
+    }
+</script>
+<script id="fs_draw" type="x-shader/x-fragment" charset="UTF-8">
+    precision highp float;
+
+    void main(void) {
+    	gl_FragColor = vec4(0,0,0, 0.5);
+    }
+</script>
+
+</head><body>
+	<canvas id="wgl" width="2000" height="1000" ></canvas>
+	<script type="text/javascript" src="wgl.js"></script>
+	<script type="text/javascript" src="main.js"></script>
+</body></html>
