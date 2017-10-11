@@ -5,7 +5,6 @@
 let lastTime;
 let frameCount = 0;
 
-let lastMouseCoordinates= [0,0];
 let mouseCoordinates    = [0,0];
 
 const GPU       = initGPUMath();
@@ -67,13 +66,13 @@ function render(){
     window.requestAnimationFrame(render);
 }
 setInterval(function(){
-    display.innerHTML = n*n + " particles @ " + 2*frameCount + "hz";
-    // lastTime = Date.now();
+    // display.innerHTML = n*n + " particles @ " + 2*frameCount + "hz";
+    display.innerHTML = Math.round(n*n/1000)/1000 + "million particles @ " + 2*frameCount + "hz";
+        // lastTime = Date.now();
     frameCount = 0;
 }, 500);
 
 function onMouseMove(e){
-    lastMouseCoordinates = mouseCoordinates;
     mouseCoordinates = [e.clientX, 1000 - e.clientY];
     GPU.setUniformForProgram("particlePhysics",     "u_mouseCoord",   [mouseCoordinates[0], mouseCoordinates[1]], "2f");
 }

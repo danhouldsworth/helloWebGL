@@ -21,16 +21,17 @@
     	float rad = i * PI;
 
     	float px = rand(vUv * ran * 2.0) * 2.0 - 1.0;
-    	float py = rand(vUv * ran * 4.0) * 2.0 - 1.0;
-    	px = px * 100.0 / UNIT * cos(rad);
-    	py = py * 100.0 / UNIT * sin(rad);
+    	float py = rand(vUv * ran * 2.0) * 2.0 - 1.0;
+    	px = px * 500.0 / UNIT * cos(rad);
+    	py = py * 500.0 / UNIT * sin(rad);
     	px = px / 2.0 + 0.5;
     	py = py / 2.0 + 0.5;
 
     	float vx = rand(vUv * ran * 8.0) * 2.0 - 1.0;
-    	float vy = rand(vUv * ran * 16.0) * 2.0 - 1.0;
-    	vx = vx * 10.0 / UNIT * cos(rad);
-    	vy = vy * 10.0 / UNIT * sin(rad);
+    	float vy = rand(vUv * ran * 8.0) * 2.0 - 1.0;
+    	// float vxt = vx;
+        vx = vx * 0.9 / UNIT * cos(rad + PI/10.0);
+    	vy = vy * 0.9 / UNIT * sin(rad + PI/10.0);
     	vx = vx / 2.0 + 0.5;
     	vy = vy / 2.0 + 0.5;
 
@@ -58,28 +59,44 @@
 
     uniform vec2        canvasSize;
     uniform sampler2D   texture;
+    uniform vec2        u_mouseCoord;
 
     varying vec2        vUv;
 
     void main(void) {
 
     	vec4 node = UNIT * (texture2D(texture, vUv) * 2.0 - 1.0);
+        node.xy += node.zw;
 
-    	node.xy += node.zw;
-    	if (node.x > canvasSize.x) {
-    		node.x = canvasSize.x;
-    		node.z *= -1.0;
-    	} else if (node.x < -canvasSize.x) {
-    		node.x = -canvasSize.x;
-    		node.z *= -1.0;
-    	}
-    	if (node.y > canvasSize.y) {
-    		node.y = canvasSize.y;
-    		node.w *= -1.0;
-    	} else if (node.y < -canvasSize.y) {
-    		node.y = -canvasSize.y;
-    		node.w *= -1.0;
-    	}
+        vec2    center       = vec2(0,0);
+        // vec2    u_mouseCoord = vec2(100.0, 100.0);
+        vec2    relPos;
+                relPos  = (node.xy - center);
+        node.zw -=  relPos / dot(relPos, relPos);
+                relPos  = (node.xy - u_mouseCoord);
+        node.zw +=  relPos / dot(relPos, relPos);
+
+
+        // Apply boundary conditions
+        if      (node.x >  canvasSize.x)node.x =  canvasSize.x;
+        else if (node.x < -canvasSize.x)node.x = -canvasSize.x;
+        if      (node.y >  canvasSize.y)node.y =  canvasSize.y;
+        else if (node.y < -canvasSize.y)node.y = -canvasSize.y;
+
+    	// if (node.x > canvasSize.x) {
+    	// 	node.x = canvasSize.x;
+    	// 	node.z *= -1.0;
+    	// } else if (node.x < -canvasSize.x) {
+    	// 	node.x = -canvasSize.x;
+    	// 	node.z *= -1.0;
+    	// }
+    	// if (node.y > canvasSize.y) {
+    	// 	node.y = canvasSize.y;
+    	// 	node.w *= -1.0;
+    	// } else if (node.y < -canvasSize.y) {
+    	// 	node.y = -canvasSize.y;
+    	// 	node.w *= -1.0;
+    	// }
 
     	node = node / UNIT / 2.0 + 0.5;
     	gl_FragColor = node;
@@ -105,19 +122,21 @@
         node.xy     = node.xy * UNIT / canvasSize;
 
         gl_Position = vec4(node.xy, 0.0, 1.0);
-        gl_PointSize= 2.0;
+        gl_PointSize= 0.5;
     }
 </script>
 <script id="fs_draw" type="x-shader/x-fragment" charset="UTF-8">
     precision highp float;
 
     void main(void) {
-    	gl_FragColor = vec4(0,0,0, 0.5);
+    	gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);
     }
 </script>
 
 </head><body>
-	<canvas id="wgl" width="2000" height="1000" ></canvas>
-	<script type="text/javascript" src="wgl.js"></script>
-	<script type="text/javascript" src="main.js"></script>
-</body></html>
+	<canvas id="wgl" width="1000" height="1000" style="background: black;"></canvas>
+    <text id="display"></text>
+</body>
+<script type="text/javascript" src="wgl.js"></script>
+<script type="text/javascript" src="main.js"></script>
+</html>

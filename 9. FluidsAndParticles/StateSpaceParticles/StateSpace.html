@@ -69,6 +69,34 @@
             gl_FragColor = vec4(density,density,density,1.0);
         }
     </script>
+    <script id="vs_draw" type="x-shader/x-vertex">
+        precision highp float;
+
+        const float UNIT = 10000.0;
+
+        attribute float     aIndex;
+
+        uniform sampler2D   texture;
+        uniform float       size;
+        uniform vec2        canvasSize;
+
+        void main(void) {
+            vec2 stateCoord = vec2((mod(aIndex, size)) / size, (floor(aIndex / size)) / size);
+            vec4 node       = texture2D(texture, stateCoord) * 2.0 - 1.0;
+
+            node.xy     = node.xy * UNIT / canvasSize;
+
+            gl_Position = vec4(node.xy, 0.0, 1.0);
+            gl_PointSize= 0.5;
+        }
+    </script>
+    <script id="fs_draw" type="x-shader/x-fragment">
+        precision highp float;
+
+        void main(void) {
+            gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);
+        }
+    </script>
 
 </head>
 <body>
