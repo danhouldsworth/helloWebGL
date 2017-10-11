@@ -2,105 +2,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script id="2d-vertex-shader" type="x-shader/x-vertex">
-        attribute vec2 a_position;
+    <script id="vs_calc" type="x-shader/x-vertex">
+        attribute   vec2    a_position;
+        attribute   vec2    aUv;
+
+        varying     vec2    textureCoord;
         void main() {
-           gl_Position = vec4(a_position, 0, 1);
+            textureCoord= aUv;
+            gl_Position = vec4(a_position, 0, 1);
         }
     </script>
-
-    <script id="particlePhysics" type="x-shader/x-fragment">
+    <script id="fs_calc" type="x-shader/x-fragment">
         precision highp float;
 
-        uniform sampler2D   u_stateSpace;
-        uniform vec2        u_textureSizeState;
+        uniform     vec2        canvasSize;
+        uniform     sampler2D   inputTexture;
+        uniform     vec2        u_mouseCoord;
 
-        uniform vec2        u_mouseCoord;
+        varying     vec2        textureCoord;
         void main() {
-            vec2    center = vec2(500,500);
-
-            vec2    particleIndex = gl_FragCoord.xy / u_textureSizeState.xy;
-            vec4    state = texture2D(u_stateSpace, particleIndex);
-            vec2    pos = state.xy;
-            vec2    vel = state.zw;
+            vec4    state   = texture2D(inputTexture, textureCoord);
+            vec2    pos     = state.xy;
+            vec2    vel     = state.zw;
 
             // Update position due to velocity
             pos += vel;
 
             // update velocity due to forces
+            vec2    center = canvasSize / 2.0;
             vec2    relPos = (pos - center);
-            vel -=  relPos / dot(relPos, relPos);
+            vel -=  5.0 * normalize(relPos) / dot(relPos, relPos);
                     relPos = (pos - u_mouseCoord);
-            vel +=  relPos / dot(relPos, relPos);
+            vel +=  1.0 * (relPos) / dot(relPos, relPos);
 
-            // if (length(vel) > 10.0) {
-                // vel *= 0.9;
-            // }
-
+            // vel += vec2(0, -0.05);
+            if (dot(vel, vel) > 4.0) {
+                vel *= 0.9;
+            } else {
+                vel *= 0.99;
+            }
             // Apply boundary conditions
-            if (pos.x < 0.0)    pos.x = 0.0;
-            if (pos.x > 1000.0) pos.x = 1000.0;
-            if (pos.y < 0.0)    pos.y = 0.0;
-            if (pos.y > 1000.0) pos.y = 1000.0;
-
-            // Apply boundary conditions
-            // if (pos.x < 0.0 || pos.x > 1000.0) {
-            //     vel.x =- 1.0 * vel.x;
-            //     pos.x += vel.x;
-            // }
-            // if (pos.y < 0.0 || pos.y > 1000.0) {
-            //     vel.y =- 1.0 * vel.y;
-            //     pos.y += vel.y;
-            // }
+            if (pos.x < 0.0)            pos.x = 0.0;
+            if (pos.x > canvasSize.x)   pos.x = canvasSize.x;
+            if (pos.y < 0.0)            {
+                pos.y = 0.0;
+                vel.y = -vel.y;
+            }
+            if (pos.y > canvasSize.y)   {
+                pos.y = canvasSize.y;
+            }
 
             gl_FragColor = vec4(pos, vel);
         }
     </script>
-    <script id="renderParticles" type="x-shader/x-fragment">
-        precision highp float;
 
-        uniform sampler2D   u_physicalSpace;
-        uniform vec2        u_textureSizePhysical;
-
-        void main() {
-            vec2    fragCoord   = gl_FragCoord.xy / u_textureSizePhysical.xy;
-            float   density     = texture2D(u_physicalSpace, fragCoord).r;
-
-            gl_FragColor = vec4(density,density,density,1.0);
-        }
-    </script>
     <script id="vs_draw" type="x-shader/x-vertex">
         precision highp float;
 
-        const float UNIT = 10000.0;
+        // const       float       n = 1024.0;
+        attribute   float       aIndex;
 
-        attribute float     aIndex;
-
-        uniform sampler2D   texture;
-        uniform float       size;
-        uniform vec2        canvasSize;
+        uniform     sampler2D   inputTexture;
+        uniform     vec2        canvasSize;
+        uniform     float       n;
 
         void main(void) {
-            vec2 stateCoord = vec2((mod(aIndex, size)) / size, (floor(aIndex / size)) / size);
-            vec4 node       = texture2D(texture, stateCoord) * 2.0 - 1.0;
+            vec2    stateCoord  = vec2((mod(aIndex, n)) / n, (floor(aIndex / n)) / n);
+            vec4    state       = texture2D(inputTexture, stateCoord);
+            vec2    pos         = state.xy;
 
-            node.xy     = node.xy * UNIT / canvasSize;
+            pos = 2.0 * pos / canvasSize - 1.0; // 0-1000 => -1 - +1
 
-            gl_Position = vec4(node.xy, 0.0, 1.0);
-            gl_PointSize= 0.5;
+            gl_Position     = vec4(pos, 0.0, 1.0);
+            gl_PointSize    = 0.5;
         }
     </script>
     <script id="fs_draw" type="x-shader/x-fragment">
         precision highp float;
 
         void main(void) {
-            gl_FragColor = vec4(0.5, 0.5, 0.5, 1.0);
+            gl_FragColor = vec4(0.3, 0.3, 0.3, 1.0);
         }
     </script>
 
 </head>
 <body>
-    <canvas id="glcanvas"></canvas>
+    <canvas id="glcanvas" style="background: black;"></canvas>
     <text id="display"></text>
 </body>
 <script type="text/javascript" src="GPUMath.js"></script>

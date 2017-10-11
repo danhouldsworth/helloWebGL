@@ -1,80 +1,64 @@
 //used a lot of ideas from https://bl.ocks.org/robinhouston/ed597847175cf692ecce to clean this code up
-// "use strict"; jshint
+// "use strict"; /* jshint
 // browser : true
+// */
 
-let lastTime;
 let frameCount = 0;
-
-let mouseCoordinates    = [0,0];
-
+let mouseCoordinates = [0,0];
 const GPU       = initGPUMath();
+const gl        = GPU.gl;
 const glcanvas  = document.getElementById("glcanvas");
 const display   = document.getElementById("display");
-const n         = 317; // particles = n*n
-glcanvas.width  = glcanvas.clientWidth = 1000;
-glcanvas.height = glcanvas.clientHeight= 1000;
-glcanvas.onmousemove  = onMouseMove;
+const n         = 2000; // particles = n*n
+const width = glcanvas.width  = glcanvas.clientWidth = 1500;
+const height= glcanvas.height = glcanvas.clientHeight= 1000;
+glcanvas.onmousemove = (e) => mouseCoordinates = [e.clientX, height-e.clientY];
 
-GPU.createProgram("particlePhysics",        "2d-vertex-shader", "particlePhysics");
-GPU.createProgram("renderParticles",        "2d-vertex-shader", "renderParticles");
+const vertexListRaster = new Float32Array([
+    -1, +1, 0, 0,
+    +1, +1, 1, 0,
+    -1, -1, 0, 1,
+    +1, -1, 1, 1
+]);
+const vertexListParticles = new Float32Array(n * n);
+for (let i = 0; i < n*n; i++) vertexListParticles[i] = i;
 
-GPU.setUniformForProgram("particlePhysics",     "u_textureSizeState", [n, n], "2f");
-GPU.setUniformForProgram("renderParticles",     "u_textureSizePhysical", [1000,1000], "2f");
-GPU.setUniformForProgram("particlePhysics",     "u_mouseCoord",   [mouseCoordinates[0], mouseCoordinates[1]], "2f");
 
-const stateSpace1   = new Float32Array(n * n * 4);
-const stateSpace2   = new Float32Array(n * n * 4);
+let stateSpacePhysics = GPU.createProgram("stateSpacePhysics",  "vs_calc",  "fs_calc", vertexListRaster);
+gl.uniform2f(gl.getUniformLocation(stateSpacePhysics,"canvasSize"), width, height);
+
+let mapAndRender      = GPU.createProgram("mapAndRender",       "vs_draw",  "fs_draw", vertexListParticles);
+gl.uniform2f(gl.getUniformLocation(mapAndRender,     "canvasSize"), width, height);
+gl.uniform1f(gl.getUniformLocation(mapAndRender,     "n"), n);
+
+const stateSpace   = new Float32Array(n * n * 4);
 for (let i = 0; i < n; i++){
     for (let j = 0; j < n; j++){
         const index = 4 * (i * n + j);
-        stateSpace1[index + 0] = Math.random() * 1000;
-        stateSpace1[index + 1] = Math.random() * 1000;
-        stateSpace1[index + 2] = Math.random() - 0.5;
-        stateSpace1[index + 3] = Math.random() - 0.5;
+        const x = (stateSpace[index + 0] = Math.random() * width) - width/2;
+        const y = (stateSpace[index + 1] = Math.random() * height)- height/2;
+        const ang = Math.atan2(y, x);
+        const rad2 = x*x+y*y;
+        stateSpace[index + 2] = Math.random() - 0.5;// + 10000*Math.sin(ang) / rad2;
+        stateSpace[index + 3] = Math.random() - 0.5;// - 10000*Math.cos(ang) / rad2;
     }
 }
-GPU.initTextureFromData("stateSpace1", n, n,            "FLOAT", stateSpace1);  GPU.initFrameBufferForTexture("stateSpace1");
-GPU.initTextureFromData("stateSpace2", n, n,            "FLOAT", stateSpace2);  GPU.initFrameBufferForTexture("stateSpace2");
-const physicalSpace = new Float32Array(1000 * 1000 * 4);
-GPU.initTextureFromData("physicalSpace", 1000, 1000,    "FLOAT", physicalSpace);GPU.initFrameBufferForTexture("physicalSpace");
+GPU.initTextureFromData("stateSpace1", n, n, "FLOAT", stateSpace);   GPU.initFrameBufferForTexture("stateSpace1");
+GPU.initTextureFromData("stateSpace2", n, n, "FLOAT", null);         GPU.initFrameBufferForTexture("stateSpace2");
 
 function render(){
-
-    GPU.setSize(n, n);
-    GPU.step("particlePhysics", ["stateSpace1"], "stateSpace2");
-    GPU.swapTextures("stateSpace1", "stateSpace2");
-
-    // <-- Read, stateSpace, write to physicalSpace, output to textureBuffer
-    GPU.readPixels(n, stateSpace1);
-    physicalSpace.fill(0);
-    for (let i = 0; i < n; i++){
-        for (let j = 0; j < n; j++){
-            const indexParticle = 4 * (i * n + j);
-            const x = stateSpace1[indexParticle]    | 0;
-            const y = stateSpace1[indexParticle + 1]| 0;
-            const indexPhysical = 4 * (x + y * 1000);
-            physicalSpace[indexPhysical]        += 0.5;
-        }
-    }
-    GPU.initTextureFromData("physicalSpace", 1000, 1000,    "FLOAT", physicalSpace);//GPU.initFrameBufferForTexture("physicalSpace");
-    // -->
-
-    GPU.setSize(1000, 1000);
-    GPU.step("renderParticles", ["physicalSpace"], null);
-
-    frameCount++;
+    const state_t1 = "stateSpace" + ((frameCount+0)%2 + 1);
+    const state_t2 = "stateSpace" + ((frameCount+1)%2 + 1);
+    GPU.setUniformForProgram("stateSpacePhysics", "u_mouseCoord", mouseCoordinates);
+    GPU.calc("stateSpacePhysics",   state_t1, state_t2,   n);
+    GPU.render("mapAndRender",      state_t2, null, n, width, height);
     window.requestAnimationFrame(render);
+    frameCount++;
 }
+
 setInterval(function(){
-    // display.innerHTML = n*n + " particles @ " + 2*frameCount + "hz";
     display.innerHTML = Math.round(n*n/1000)/1000 + "million particles @ " + 2*frameCount + "hz";
-        // lastTime = Date.now();
     frameCount = 0;
 }, 500);
-
-function onMouseMove(e){
-    mouseCoordinates = [e.clientX, 1000 - e.clientY];
-    GPU.setUniformForProgram("particlePhysics",     "u_mouseCoord",   [mouseCoordinates[0], mouseCoordinates[1]], "2f");
-}
 
 render();

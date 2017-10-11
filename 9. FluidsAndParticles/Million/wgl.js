@@ -473,24 +473,16 @@ var wgl = {};
             n.bindTexture(n.TEXTURE_2D, null))
         }
         ,
-        e.prototype.create2D = function(e, r, n, o) {
-            "undefined" == typeof o && (o = !1);
-            var i, u;
-            i = this._context,
-            u = this._textureList[e],
-            null != u && i.deleteTexture(u),
-            u = this._textureList[e] = i.createTexture(),
-            i.bindTexture(i.TEXTURE_2D, u),
-            i.texImage2D(i.TEXTURE_2D, 0, i.RGBA, r, n, 0, i.RGBA, o ? i.FLOAT : i.UNSIGNED_BYTE, null),
-            o ? (i.texParameteri(i.TEXTURE_2D, i.TEXTURE_MAG_FILTER, i.NEAREST),
-            i.texParameteri(i.TEXTURE_2D, i.TEXTURE_MIN_FILTER, i.NEAREST),
-            i.texParameteri(i.TEXTURE_2D, i.TEXTURE_WRAP_S, i.CLAMP_TO_EDGE),
-            i.texParameteri(i.TEXTURE_2D, i.TEXTURE_WRAP_T, i.CLAMP_TO_EDGE)) : t.utils.WGLMath.isPowerOfTwo(r) && t.utils.WGLMath.isPowerOfTwo(n) ? (i.generateMipmap(i.TEXTURE_2D),
-            i.texParameteri(i.TEXTURE_2D, i.TEXTURE_MAG_FILTER, i.LINEAR),
-            i.texParameteri(i.TEXTURE_2D, i.TEXTURE_MIN_FILTER, i.LINEAR_MIPMAP_LINEAR)) : (i.texParameteri(i.TEXTURE_2D, i.TEXTURE_MIN_FILTER, i.LINEAR),
-            i.texParameteri(i.TEXTURE_2D, i.TEXTURE_WRAP_S, i.CLAMP_TO_EDGE),
-            i.texParameteri(i.TEXTURE_2D, i.TEXTURE_WRAP_T, i.CLAMP_TO_EDGE)),
-            i.bindTexture(i.TEXTURE_2D, null)
+        e.prototype.create2D = function(name, width, height, data) {
+            const gl = this._context;
+            const texture = this._textureList[name] = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.FLOAT, data);
         }
         ,
         e.prototype.remove = function(t) {
@@ -687,10 +679,6 @@ var wgl = {};
             this._canvas.height = e
         }
         ,
-        e.prototype.setWebGLViewport = function(t, e, r, n) {
-            this._context.viewport(t, e, r, n)
-        }
-        ,
         e.prototype.setSize = function(t, e) {
             this._canvas.width = t,
             this._canvas.height = e,
@@ -751,16 +739,8 @@ var wgl = {};
             return new t.Uniform(this._context)
         }
         ,
-        e.prototype.blendMode = function(t) {
-            t ? this._context.enable(this._context.BLEND) : this._context.disable(this._context.BLEND)
-        }
-        ,
-        e.prototype.blendNone = function() {
-            this._context.blendFunc(this._context.ONE, this._context.ZERO)
-        }
-        ,
         e.prototype.blendAlpha = function() {
-            this._context.blendFunc(this._context.SRC_ALPHA, this._context.ONE_MINUS_SRC_ALPHA)
+            // this._context.blendFunc(this._context.SRC_ALPHA, this._context.ONE_MINUS_SRC_ALPHA)
         }
         ,
         e.prototype.blendAdd = function() {

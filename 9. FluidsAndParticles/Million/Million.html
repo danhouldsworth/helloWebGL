@@ -57,25 +57,22 @@
 
     const float UNIT    = 10000.0;
 
-    uniform vec2        canvasSize;
     uniform sampler2D   texture;
     uniform vec2        u_mouseCoord;
 
     varying vec2        vUv;
 
     void main(void) {
-
+        vec2 canvasSize = vec2(500.0, 500.0);
     	vec4 node = UNIT * (texture2D(texture, vUv) * 2.0 - 1.0);
         node.xy += node.zw;
 
         vec2    center       = vec2(0,0);
-        // vec2    u_mouseCoord = vec2(100.0, 100.0);
         vec2    relPos;
                 relPos  = (node.xy - center);
         node.zw -=  relPos / dot(relPos, relPos);
                 relPos  = (node.xy - u_mouseCoord);
         node.zw +=  relPos / dot(relPos, relPos);
-
 
         // Apply boundary conditions
         if      (node.x >  canvasSize.x)node.x =  canvasSize.x;
@@ -83,22 +80,7 @@
         if      (node.y >  canvasSize.y)node.y =  canvasSize.y;
         else if (node.y < -canvasSize.y)node.y = -canvasSize.y;
 
-    	// if (node.x > canvasSize.x) {
-    	// 	node.x = canvasSize.x;
-    	// 	node.z *= -1.0;
-    	// } else if (node.x < -canvasSize.x) {
-    	// 	node.x = -canvasSize.x;
-    	// 	node.z *= -1.0;
-    	// }
-    	// if (node.y > canvasSize.y) {
-    	// 	node.y = canvasSize.y;
-    	// 	node.w *= -1.0;
-    	// } else if (node.y < -canvasSize.y) {
-    	// 	node.y = -canvasSize.y;
-    	// 	node.w *= -1.0;
-    	// }
-
-    	node = node / UNIT / 2.0 + 0.5;
+    	node = (node / UNIT) / 2.0 + 0.5;
     	gl_FragColor = node;
     }
 </script>
@@ -113,9 +95,9 @@
 
     uniform sampler2D   texture;
     uniform float       size;
-    uniform vec2        canvasSize;
 
     void main(void) {
+        vec2 canvasSize = vec2(500.0, 500.0);
         vec2 stateCoord = vec2((mod(aIndex, size)) / size, (floor(aIndex / size)) / size);
         vec4 node       = texture2D(texture, stateCoord) * 2.0 - 1.0;
 
