@@ -1,0 +1,80 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script id="2d-vertex-shader" type="x-shader/x-vertex">
+        attribute vec2 a_position;
+        void main() {
+           gl_Position = vec4(a_position, 0, 1);
+        }
+    </script>
+
+    <script id="particlePhysics" type="x-shader/x-fragment">
+        precision highp float;
+
+        uniform sampler2D   u_stateSpace;
+        uniform vec2        u_textureSizeState;
+
+        uniform vec2        u_mouseCoord;
+        void main() {
+            vec2    center = vec2(500,500);
+
+            vec2    particleIndex = gl_FragCoord.xy / u_textureSizeState.xy;
+            vec4    state = texture2D(u_stateSpace, particleIndex);
+            vec2    pos = state.xy;
+            vec2    vel = state.zw;
+
+            // Update position due to velocity
+            pos += vel;
+
+            // update velocity due to forces
+            vec2    relPos = (pos - center);
+            vel -=  relPos / dot(relPos, relPos);
+                    relPos = (pos - u_mouseCoord);
+            vel +=  relPos / dot(relPos, relPos);
+
+            // if (length(vel) > 10.0) {
+                // vel *= 0.9;
+            // }
+
+            // Apply boundary conditions
+            if (pos.x < 0.0)    pos.x = 0.0;
+            if (pos.x > 1000.0) pos.x = 1000.0;
+            if (pos.y < 0.0)    pos.y = 0.0;
+            if (pos.y > 1000.0) pos.y = 1000.0;
+
+            // Apply boundary conditions
+            // if (pos.x < 0.0 || pos.x > 1000.0) {
+            //     vel.x =- 1.0 * vel.x;
+            //     pos.x += vel.x;
+            // }
+            // if (pos.y < 0.0 || pos.y > 1000.0) {
+            //     vel.y =- 1.0 * vel.y;
+            //     pos.y += vel.y;
+            // }
+
+            gl_FragColor = vec4(pos, vel);
+        }
+    </script>
+    <script id="renderParticles" type="x-shader/x-fragment">
+        precision highp float;
+
+        uniform sampler2D   u_physicalSpace;
+        uniform vec2        u_textureSizePhysical;
+
+        void main() {
+            vec2    fragCoord   = gl_FragCoord.xy / u_textureSizePhysical.xy;
+            float   density     = texture2D(u_physicalSpace, fragCoord).r;
+
+            gl_FragColor = vec4(density,density,density,1.0);
+        }
+    </script>
+
+</head>
+<body>
+    <canvas id="glcanvas"></canvas>
+    <text id="display"></text>
+</body>
+<script type="text/javascript" src="GPUMath.js"></script>
+<script type="text/javascript" src="main.js"></script>
+</html>
