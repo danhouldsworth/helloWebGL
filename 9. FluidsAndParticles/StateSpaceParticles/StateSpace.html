@@ -59,16 +59,15 @@
     <script id="vs_draw" type="x-shader/x-vertex">
         precision highp float;
 
-        // const       float       n = 1024.0;
         attribute   float       aIndex;
 
-        uniform     sampler2D   inputTexture;
+        uniform     sampler2D   stateSpaceTexture;
         uniform     vec2        canvasSize;
         uniform     float       n;
 
         void main(void) {
             vec2    stateCoord  = vec2((mod(aIndex, n)) / n, (floor(aIndex / n)) / n);
-            vec4    state       = texture2D(inputTexture, stateCoord);
+            vec4    state       = texture2D(stateSpaceTexture, stateCoord);
             vec2    pos         = state.xy;
 
             pos = 2.0 * pos / canvasSize - 1.0; // 0-1000 => -1 - +1
@@ -77,19 +76,44 @@
             gl_PointSize    = 0.5;
         }
     </script>
+    <script id="fs_pressure" type="x-shader/x-fragment">
+        precision highp float;
+        void main(void) {
+            gl_FragColor = vec4(0.1, 0.1, 0.1, 0.1);
+        }
+    </script>
     <script id="fs_draw" type="x-shader/x-fragment">
         precision highp float;
 
+        uniform     sampler2D   pressureMap;
         void main(void) {
-            gl_FragColor = vec4(0.3, 0.3, 0.3, 1.0);
+            vec4 heatMap = texture2D(pressureMap, gl_FragCoord.xy);
+            float density = heatMap.x;
+            density = 1.0;
+            // float en = heatMap.a;
+            // gl_FragColor = heatMap;
+            gl_FragColor = vec4(density, 0.3, 0.3, density / 1.0);
         }
     </script>
+    <script id="vs_view" type="x-shader/x-vertex">
+        attribute   vec2    a_position;
+        void main() {
+            gl_Position = vec4(a_position, 0, 1);
+        }
+    </script>
+    <script id="fs_view" type="x-shader/x-fragment">
+        precision highp float;
+        uniform     sampler2D   anyTexture;
+        void main(void) {
+            gl_FragColor = texture2D(anyTexture, gl_FragCoord.xy);
+        }
+    </script>
+
 
 </head>
 <body>
     <canvas id="glcanvas" style="background: black;"></canvas>
     <text id="display"></text>
 </body>
-<script type="text/javascript" src="GPUMath.js"></script>
 <script type="text/javascript" src="main.js"></script>
 </html>
