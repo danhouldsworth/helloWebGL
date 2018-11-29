@@ -1,0 +1,133 @@
+<html><head><style>body {background-color: black;}</style></head><body></body>
+<script type="x-shader" id="x-vertex">#version 300 es
+    in      float   a_label;
+    out     vec2    v_bilerpOutput;
+    void main(void) {
+        vec3 screenCoord;
+        if      (a_label == 1.0) {screenCoord = vec3(-1.0, -1.0, 0.0); }
+        else if (a_label == 2.0) {screenCoord = vec3(-1.0, +1.0, 0.0); }
+        else if (a_label == 3.0) {screenCoord = vec3(+1.0, -1.0, 0.0); }
+        else if (a_label == 4.0) {screenCoord = vec3(+1.0, +1.0, 0.0); }
+
+        v_bilerpOutput.x  = screenCoord.x * 2.0;
+        v_bilerpOutput.y  = screenCoord.y * 1.0;
+        gl_Position     = vec4(screenCoord, 1.0);
+    }
+</script>
+<script type="x-shader" id="x-fragment">#version 300 es
+    precision   mediump float;
+    uniform     float   u_time;
+    uniform     vec2    u_singularities[9];
+    in          vec2    v_bilerpOutput;
+    out         vec4    outColor;
+    void main(void) {
+        float theta = u_time * 0.01;
+        float scale = 0.1 - u_time * 0.0001;
+        mat3 RotZ = mat3(
+            +cos(theta),   -sin(theta), 0.0,
+            +sin(theta),   +cos(theta), 0.0,
+            0.0, 0.0, 1.0
+        );
+
+        vec2    z = v_bilerpOutput;
+        float intensity = 0.0;
+
+        float shipSize[6];
+        shipSize[0] = 0.02;
+        shipSize[1] = 0.01;
+        shipSize[2] = 0.015;
+        shipSize[3] = 0.01;
+        shipSize[4] = 0.01;
+        shipSize[5] = 0.015;
+
+        vec2 p[6];
+        p[0] = u_singularities[0];
+        p[1] = (scale * RotZ * vec3(6.0,1.0,0.0)).xy;
+        p[2] = vec2(0.0,0.0);
+        p[3] = (scale * RotZ * vec3(6.0,1.0,0.0)).xy;
+        p[4] = (scale * RotZ * RotZ *  vec3(6.0,1.0,0.0)).xy;
+        p[5] = (0.5 * scale * RotZ * vec3(6.0,1.0,0.0)).xy;
+
+        int sourcesMax      = 6;
+        int particlesMax    = 6;
+        vec2 sources[6];
+        sources[0] = vec2(0.75, 0.5* sin(u_time * 0.005));
+        sources[1] = vec2(-0.75, -0.25* sin(u_time * 0.01));
+        sources[2] = vec2(-2.0, sin(u_time * 0.01));
+        sources[3] = vec2(0.0, 1.0);
+        sources[4] = vec2(-0.5, -1.25);
+        sources[5] = vec2(-0.5, 0.0) + (0.9 * scale * RotZ * RotZ * vec3(5.0,1.0,0.0)).xy;
+
+        float brightness[6];
+        brightness[0] = 0.005;
+        brightness[1] = 0.025;
+        brightness[2] = 0.01;
+        brightness[3] = 0.01;
+        brightness[4] = 0.02;
+        brightness[5] = 0.005;
+
+        vec2 source, zT, pT[3];
+        float r, angle[3], ambient;
+        for (int sourceIndex = 0; sourceIndex < sourcesMax; sourceIndex++){
+            source  = sources[sourceIndex];
+            zT      = z - source;
+            r       = length(zT);
+            ambient = brightness[sourceIndex] / (r * r);
+            for (int particleIndex = 0; particleIndex < particlesMax; particleIndex++){
+                pT[particleIndex]       = p[particleIndex] - source;
+                angle[particleIndex]    = acos(dot(normalize(zT), normalize(pT[particleIndex])));
+                if (dot(zT, pT[particleIndex]) > dot(pT[particleIndex], pT[particleIndex]) && angle[particleIndex] < shipSize[particleIndex] / length(pT[particleIndex]) ) ambient = 0.0;
+                if (length(zT-pT[particleIndex]) < shipSize[particleIndex]) ambient = 0.0;
+            }
+            intensity += ambient;
+        }
+
+        outColor =  vec4(intensity, intensity, intensity, 1.0);
+    }
+</script>
+<script type="text/javascript">
+
+    const canvas  = document.createElement("canvas");
+    const singularities = [[0,0]];
+    const userEvent = e => singularities[0]=[
+        -2.0 + (e.clientX - canvas.getBoundingClientRect().left) / (0.25*canvas.width),
+        +1.0 - (e.clientY - canvas.getBoundingClientRect().top ) / (0.50*canvas.height)
+    ];
+    canvas.addEventListener("mousemove",    userEvent);
+    canvas.addEventListener("mousedown",    userEvent);
+    canvas.addEventListener("touchstart",   userEvent);
+    canvas.addEventListener("touchmove",    userEvent);
+    canvas.height = 1200;
+    canvas.width = 2*canvas.height;
+    document.body.appendChild(canvas);
+
+    // <-- Compile Shader
+    const gl = canvas.getContext("webgl2");
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, document.getElementById("x-vertex").text);
+    gl.compileShader(vertexShader);
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragmentShader, document.getElementById("x-fragment").text);
+    gl.compileShader(fragmentShader);
+    const shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+    gl.useProgram(shaderProgram);
+    // --
+    // <-- Trigger with data
+    const uniqueButMeaninglessLabels = new Float32Array([1,2,3,4]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, uniqueButMeaninglessLabels, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(     gl.getAttribLocation(shaderProgram, "a_label"), 1, gl.FLOAT, false, 0, 0);   // 'Vertex' attributes of size 1
+    gl.enableVertexAttribArray( gl.getAttribLocation(shaderProgram, "a_label"));
+    // -->
+    let ticks = 0.0;
+    const animate = function(){
+        gl.uniform1f( gl.getUniformLocation(shaderProgram, "u_time"), ticks++);
+        gl.uniform2fv(gl.getUniformLocation(shaderProgram, "u_singularities[0]"), singularities[0]);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, uniqueButMeaninglessLabels.length);
+        window.requestAnimationFrame(animate);
+    };
+    animate();
+</script>
