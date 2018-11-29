@@ -8,7 +8,7 @@ let actualWidth, actualHeight;
 let body;
 
 let obstaclePosition    = [0,0];
-let obstacleRad         = 25;
+let obstacleRad         = 50;//25;
 let movingObstacle      = false;
 
 let lastMouseCoordinates= [0,0];
@@ -88,6 +88,14 @@ function initGL() {
 function render(){
 
     if (!paused) {
+
+        const scalerAoArads = (document.getElementById("angleAttack").value / 360.0)*2.0*Math.PI;
+        GPU.setUniformForProgram("render" ,"u_angleAttack", scalerAoArads, "1f");GPU.setUniformForProgram("boundary" ,"u_angleAttack", scalerAoArads, "1f");
+        switch (document.querySelector('input[name="obstacleShape"]:checked').value){
+            case "square"       :   GPU.setUniformForProgram("render" ,"u_obstacleShape",     1.0, "1f");GPU.setUniformForProgram("boundary" ,"u_obstacleShape",     1.0, "1f");    break;
+            case "circle"       :   GPU.setUniformForProgram("render" ,"u_obstacleShape",     2.0, "1f");GPU.setUniformForProgram("boundary" ,"u_obstacleShape",     2.0, "1f");    break;
+            case "airfoil"      :   GPU.setUniformForProgram("render" ,"u_obstacleShape",     3.0, "1f");GPU.setUniformForProgram("boundary" ,"u_obstacleShape",     3.0, "1f");    break;
+        }
 
         // Advect velocity
         GPU.setSize(width, height);
@@ -227,7 +235,8 @@ function resetWindow(){
     for (let i = 0; i < actualHeight; i++){
         for (let j = 0; j < actualWidth; j++){
             const index = 4 * (i * actualWidth + j);
-            if (Math.floor((i - 2) / numPx)%2 === 0) material[index] = 1.0;
+            // if (Math.floor((i - 2) / numPx)%5 === 0) material[index] = 1.0;
+            if (i%20 < 3) material[index] = 1.0;
         }
     }
     GPU.initTextureFromData("material",     actualWidth, actualHeight, "FLOAT", material);  GPU.initFrameBufferForTexture("material");

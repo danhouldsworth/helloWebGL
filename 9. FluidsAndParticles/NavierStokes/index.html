@@ -15,27 +15,44 @@
         uniform float       u_scale;
         uniform vec2        u_textureSize;
 
-        uniform vec2        u_obstaclePosition; // scaled to texture size
-        uniform float       u_obstacleRad;
+        uniform vec2        u_obstaclePosition;             // scaled to texture size
+        uniform float       u_obstacleRad;                  // scaled to texture size
+        uniform float       u_obstacleShape;
+
+        uniform float       u_angleAttack;
+
 
         void main() {
-            vec2    fragCoord       = gl_FragCoord.xy; // Screen coords
-            float   u_obstacleRd1   = u_obstacleRad + 1.0;
+            vec2    fragCoord       = gl_FragCoord.xy;      // Screen coords
+            float   u_obstacleRd1   = u_obstacleRad + 1.0;  // 1 pixel
 
-            vec2 dir = fragCoord - u_obstaclePosition; // not sure where this fac of 3 came from?
-            // vec2 dir = fragCoord - u_obstaclePosition; // not sure where this fac of 3 came from?
+            vec2 dir = fragCoord - u_obstaclePosition;
+            mat2 rotation = mat2(
+                +cos(u_angleAttack),  -sin(u_angleAttack),
+                +sin(u_angleAttack),  +cos(u_angleAttack)
+            );
+            dir = dir*rotation;
             float dist = length(dir);
-            // if      (fragCoord.y <= (1.0 / u_textureSize.y))      {gl_FragColor = vec4(0);}
-            // else if (fragCoord.y >= (u_textureSize.y - 1.0))      {gl_FragColor = vec4(0);}
-            if      (dist < u_obstacleRad)      {gl_FragColor = vec4(0);}
-            else if (dist < u_obstacleRad + 1.0){gl_FragColor = texture2D(u_texture, (fragCoord + dir / dist * 2.0) / u_textureSize) * u_scale;}
-            else                                {gl_FragColor = texture2D(u_texture, fragCoord                      / u_textureSize);}
+            if (u_obstacleShape == 2.0 ){
+            // Circle
+                if      (dist < u_obstacleRad)      {gl_FragColor = vec4(0);}
+                else if (dist < u_obstacleRd1)      {gl_FragColor = texture2D(u_texture, (fragCoord + dir / dist * 2.0) / u_textureSize) * u_scale;}
+                else                                {gl_FragColor = texture2D(u_texture, fragCoord                      / u_textureSize);}
+            }
+            else if (u_obstacleShape == 1.0 ){
+            // Square
+                if      (dir.x > -u_obstacleRad && dir.y > -u_obstacleRad && dir.x < u_obstacleRad && dir.y < u_obstacleRad) {gl_FragColor = vec4(0);}
+                else if (dir.x > -u_obstacleRd1 && dir.y > -u_obstacleRd1 && dir.x < u_obstacleRd1 && dir.y < u_obstacleRd1) {gl_FragColor = texture2D(u_texture, (fragCoord + dir / dist * 2.0) / u_textureSize) * u_scale;}
+                else                                                                                                         {gl_FragColor = texture2D(u_texture, fragCoord                      / u_textureSize);}
+            }
+            else if (u_obstacleShape == 3.0){
+            // Airfoil
+                dir /= 2.0 * u_obstacleRad; // Need to scale such chord == 1.0
 
-
-            // if      (dir.x > -u_obstacleRad && dir.y > -u_obstacleRad && dir.x < u_obstacleRad && dir.y < u_obstacleRad) {gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);}
-            // else if (dir.x > -u_obstacleRd1 && dir.y > -u_obstacleRd1 && dir.x < u_obstacleRd1 && dir.y < u_obstacleRd1) {gl_FragColor = texture2D(u_texture, (fragCoord + dir / dist * 2.0) / u_textureSize) * u_scale;}
-            // else                                                                                                         {gl_FragColor = texture2D(u_texture, fragCoord                      / u_textureSize);}
-
+                if (dir.x >= 0.0 && abs(dir.y) <= (0.25 * (1.4845*sqrt(dir.x) - 0.63*dir.x - 1.758*dir.x*dir.x + 1.4215*dir.x*dir.x*dir.x - 0.5075*dir.x*dir.x*dir.x*dir.x) )){gl_FragColor = vec4(0);}
+                // Do same but with a slightly larget (1x Px) obsRadius for boundary?
+                else                                                                                                                                                          {gl_FragColor = texture2D(u_texture, fragCoord                      / u_textureSize);}
+            }
         }
     </script>
 
@@ -43,30 +60,53 @@
         precision highp float;
 
         uniform sampler2D   u_material;
-        uniform vec2        u_obstaclePosition;
         uniform vec2        u_textureSize;
+        uniform vec2        u_obstaclePosition;
         uniform float       u_obstacleRad;
+        uniform float       u_obstacleShape;
 
         uniform float       u_colourScaler;
 
+        uniform float       u_angleAttack;
+
         void main() {
             vec2    fragCoord       = gl_FragCoord.xy;
+            vec2    dir             = fragCoord - u_obstaclePosition;
             float   u_obstacleRd1   = u_obstacleRad + 2.0;
-            vec2    dir             = fragCoord - (u_obstaclePosition + vec2(-0.0, -0.0));
-            float   dist            = length(dir);
 
-            if (dist < u_obstacleRd1){
-                gl_FragColor = vec4(0.925, 0, 0.55, 1);
-                return;
+            float   dist            = length(dir);
+            mat2 rotation = mat2(
+                +cos(u_angleAttack),  -sin(u_angleAttack),
+                +sin(u_angleAttack),  +cos(u_angleAttack)
+            );
+            dir = dir*rotation;
+            if (u_obstacleShape == 2.0 ){
+            // Circle
+                if (dist < u_obstacleRd1){
+                    gl_FragColor = vec4(1.0, 0, 0.0, 1);
+                    return;
+                }
+            }
+            else if (u_obstacleShape == 1.0 ){
+            // Square
+                if (dir.x > -u_obstacleRd1 && dir.y > -u_obstacleRd1 && dir.x < u_obstacleRd1 && dir.y < u_obstacleRd1){
+                    gl_FragColor = vec4(1.0, 0, 0.0, 1);
+                    return;
+                }
+            }
+            else if (u_obstacleShape == 3.0 ){
+            // Airfoil 0 AoA
+                dir /= 2.0 * u_obstacleRad; // Need to scale such chord == 1.0
+
+                if (dir.x >= 0.0 && abs(dir.y) <= (0.25 * (1.4845*sqrt(dir.x) - 0.63*dir.x - 1.758*dir.x*dir.x + 1.4215*dir.x*dir.x*dir.x - 0.5075*dir.x*dir.x*dir.x*dir.x) )){
+                    gl_FragColor = vec4(1.0, 0, 0.0, 1);
+                    return;
+                }
+
             }
 
-            // if (dir.x > -u_obstacleRd1 && dir.y > -u_obstacleRd1 && dir.x < u_obstacleRd1 && dir.y < u_obstacleRd1){
-                // gl_FragColor = vec4(0.925, 0, 0.55, 1);
-                // return;
-            // }
-
             float mat1 = texture2D(u_material, fragCoord / u_textureSize).x;
-            vec3 color = vec3(0.98, 0.93, 0.84);
+            vec3 color = vec3(1.0,1.0,1.0); // vec3(0.98, 0.93, 0.84);
             gl_FragColor = vec4(mat1 * color * u_colourScaler, 1);
         }
     </script>
@@ -339,6 +379,11 @@
         <input type="radio" name="visualisation" value="velocity">velocity
         <input type="radio" name="visualisation" value="pressure">pressure<input type="range" id="scalerP" value="5.0" min="1.0" max="10.0">
         <input type="radio" name="visualisation" value="divergence">divergence<input type="range" id="scalerD" value="100.0" min="1.0" max="10000.0">
+        <br/>
+        <input type="radio" name="obstacleShape" value="square" checked="checked">square
+        <input type="radio" name="obstacleShape" value="circle">circle
+        <input type="radio" name="obstacleShape" value="airfoil">aifoil(AoA=<input type="range" id="angleAttack" value="0.0" min="-180.0" max="180.0">)
+        <br/>
         <button onclick="paused = !paused;">PAUSE!</button>
     </div>
     <text id="display">TBC</text>
