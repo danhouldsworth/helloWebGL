@@ -1,0 +1,122 @@
+<html><head><style>body{background-color: grey;}canvas{background-color: blue;}</style></head>
+<body>
+	<p>Q1. Does iterative step vs full range lookup, stabilise on the same end result?</p>
+	<p>Q2. Is the issue with the zero speed start / kink real or an artifact? - To Discuss</p>
+	<p>Q3. Can we iteratively increase gridSize / y delta to speed up (if on iterate) - YES, just need to interpolate into new grid seed</p>
+	<p>A1. Detect when full path stabilised at localised minumum for this resolution - DONE, but need to link to localised iterations only</p>
+	Grid Size = <text id="gridSize">TBC</text><br/>
+	Iterations= <text id="iterationCount">TBC</text><br/>
+	Path cost = <text id="currentCost">TBC</text><br/>
+<canvas id="visualiser"></canvas>
+</body>
+<script type="text/javascript">
+	// Set Up canvas
+	const canvas  = document.getElementById("visualiser");
+	const ctx = canvas.getContext("2d");
+	canvas.width 	= 1000; // 0 -> 1 Left to right
+	canvas.height 	= 1000; // 0 -> 1 down
+
+	// ShortCuts
+	const round 	= Math.round;
+	const sqrt 		= Math.sqrt;
+	const min 		= Math.min;
+	const max 		= Math.max;
+	const average 	= (a,b) 	=> (a+b)/2;
+	const diffSqrd 	= (y1,y2)	=> {const diff = y2 - y1;return diff * diff;};
+	const to6dps 	= (x) 		=> round(x*1000000)/1000000;
+
+	// Constants and starting conditions
+	const maxPenalty= 999999999999;
+	const G 		= 9.81;
+	const v0Sqrd 	= 2*G*0; 	// equivalent of starting with speed at ten pixel down
+	const A 		= 0.02;		// Percentage of height
+	const B 		= 0.3;		// Percentage of height
+
+	let gridSize 	= 19; // actually +1
+	let resolution 	= canvas.width / (gridSize + 1);
+	let paths 		= [];
+	let yDelta 		= 0.01;
+	let lastPathCost= 0;
+
+	const seedViablePath = () => {
+		const y = [];
+		y[0] 		=      (A * gridSize);
+		y[gridSize] =      (B * gridSize);
+		for (let i = 1; i < gridSize; i++) y[i] = 0;
+		paths.push(y);
+		document.getElementById("gridSize").innerText = gridSize + 1;
+	};
+
+	const renderPath = (y) => {
+		let pathCost = 0;
+		canvas.width = canvas.width;
+		for (let i = 0; i <= gridSize; i++){
+			if (i ===0 || i === gridSize) {
+				ctx.fillStyle = "red";
+			} else {
+				ctx.fillStyle = "white";
+				pathCost += getCostABCatX(y[i-1], y[i], y[i+1], i);
+			}
+			ctx.fillRect(i * resolution, y[i] * resolution, resolution, resolution);
+		}
+		for (let j = 0; j <= gridSize; j++){
+			ctx.fillStyle = "red";
+			if (j > round(gridSize * 0.25)) ctx.fillRect(round(gridSize * 0.66) * resolution, j * resolution, resolution, resolution);
+			if (j < round(gridSize * 0.33)) ctx.fillRect(round(gridSize * 0.33) * resolution, j * resolution, resolution, resolution);
+		}
+
+		const lastDelta = to6dps(to6dps(pathCost) - to6dps(lastPathCost));
+		document.getElementById("iterationCount").innerText = paths.length;
+		document.getElementById("currentCost").innerText = to6dps(pathCost);// + " (last delta = " + lastDelta + ")";
+
+		if (lastDelta === 0){
+			gridSize = (gridSize + 1)*2 - 1;
+			resolution= canvas.width / (gridSize + 1);
+			paths = [];
+			seedViablePath();
+			document.getElementById("gridSize").innerText = gridSize + 1;
+		}
+		lastPathCost = pathCost;
+	};
+
+	const getCostABCatX = (y1, y2, y3, i) => {
+		if (y2 < 0 || y2 > gridSize) 								{return maxPenalty;}
+		// if (i === round(gridSize *0.33) && y2 < gridSize * 0.33) 	{return maxPenalty;}
+		// if (i === round(gridSize *0.66) && y2 > gridSize * 0.25) 	{return maxPenalty;}
+
+		const path1_averageSpeed 	= sqrt(v0Sqrd + 2*G * average(y1, y2));
+		const path2_averageSpeed 	= sqrt(v0Sqrd + 2*G * average(y2, y3));
+		const path1_Length 			= sqrt(1 + diffSqrd(y1,y2));
+		const path2_Length 			= sqrt(1 + diffSqrd(y2,y3));
+		const path1_time 			= path1_Length / path1_averageSpeed;
+		const path2_time 			= path2_Length / path2_averageSpeed;
+
+		const costForSegmentABC = path1_time + path2_time;
+
+		return costForSegmentABC;
+	};
+
+	const iterate = () => {
+		const yN_minus1 = paths[paths.length-1];
+		const yN = [];
+		yN[0] = yN_minus1[0]; yN[gridSize] = yN_minus1[gridSize];
+		for (let i = 1; i < gridSize; i++){
+			let lowestCostForElement = maxPenalty;
+			// for (let j = max(0,yN_minus1[i]-yDelta*2); j < min(gridSize,yN_minus1[i]+yDelta*2); j += yDelta){
+			for (let j = 0; j < gridSize; j += yDelta){
+				const costForThisTrial = getCostABCatX(yN_minus1[i-1], j, yN_minus1[i+1], i);
+				if (costForThisTrial < lowestCostForElement){
+					lowestCostForElement = costForThisTrial;
+					yN[i] = j;
+				}
+			}
+		}
+		paths.push(yN);
+	};
+
+	seedViablePath();
+	renderPath(paths[0]);
+	setInterval(iterate, 0);
+	setInterval(()=>renderPath(paths[paths.length-1]), 20);
+</script>
+</html>

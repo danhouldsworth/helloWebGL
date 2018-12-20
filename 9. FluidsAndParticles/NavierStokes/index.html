@@ -332,11 +332,11 @@
             vec2 pos = fragCoord - pxCenter - u_dt * currentVelocity;
 
              if (pos.x < 1.0) {
-               gl_FragColor = vec4(1.0, 0, 0, 0);
+               gl_FragColor = vec4(1.0, 0, 0, 0); // Also in start conditions JS
                return;
             }
             if (pos.x >= u_textureSize.x - 1.0) {
-                gl_FragColor = vec4(0, 0, 0, 0);
+                gl_FragColor = vec4(0);
                 return;
             }
             if (pos.x >= u_textureSize.x - 1.0) pos.x -= u_textureSize.x - 1.0;

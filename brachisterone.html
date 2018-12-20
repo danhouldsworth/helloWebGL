@@ -1,0 +1,86 @@
+<html><head>
+	<style>
+		body {
+			background-color: black;
+		}
+	</style>
+</head>
+<body>
+<canvas id="visualiser"></canvas>
+</body>
+<script type="text/javascript">
+	const canvas  = document.getElementById("visualiser");
+	const ctx = canvas.getContext("2d");
+	canvas.width 	= 1000; // 0 -> 1 Left to right
+	canvas.height 	= 1000; // 0 -> 1 down
+
+	const gridSize = 99; // actually _1
+	const resolution = canvas.width / (gridSize + 1);
+	const paths = [];
+
+	// Set up
+	const round = Math.round;
+
+	const G = 10;
+	const y = [];
+	const B = 0.3;
+	y[0] 		= 0;
+	y[gridSize] = round(B * gridSize);
+	y[gridSize] =      (B * gridSize);
+	for (let i = 1; i < gridSize; i++){
+
+		if (i<gridSize*0.75) y[i] = round(B*i*2); else y[i]=y[i-1]-1;
+		if (i<gridSize*0.75) y[i] = 	 (B*i*2); else y[i]=y[i-1]-1;
+		y[i] = 1;
+		//y[i] = round(B*i);
+	}
+	paths.push(y);
+
+	const renderPath = (y) => {
+		canvas.width = canvas.width;
+		for (let i = 0; i <= gridSize; i++){
+			if (i ===0 || i === gridSize) {ctx.fillStyle = "red";} else {ctx.fillStyle = "white";}
+			ctx.fillRect(i * resolution, y[i] * resolution, resolution, resolution);
+		}
+		for (let j = round(gridSize * 0.25); j <= gridSize; j++){
+			ctx.fillStyle = "red";
+			// ctx.fillRect(round(gridSize / 2) * resolution, j * resolution, resolution, resolution);
+		}
+	};
+	const yChunk = 0.01;
+	const chooseFastest = (up, same, down) => {
+		if (up   < same && up < down) return -yChunk;
+		if (down < same && up > down) return +yChunk;
+		return 0;
+	};
+	const getCostABC = (y1, y2, y3, i) => {
+		if (y1 < 0 || y2 < 0 || y3 < 0 || y1 > gridSize || y3 > gridSize || y3 > gridSize) 	{console.log(i, "OUTSIDE", y1,y2,y3);return 999999999999;}
+		// if (i === round(gridSize / 2) && y2 > gridSize * 0.25) 								{console.log(i, "BARRIER", y1,y2,y3);return 999999999999;}
+		const path1_averageSpeed 	= Math.sqrt(2 * G * (y1 + y2) / 2);
+		const path2_averageSpeed 	= Math.sqrt(2 * G * (y2 + y3) / 2);
+		const path1_Length 			= Math.sqrt(1*1 + (y2 - y1)*(y2 - y1));
+		const path2_Length 			= Math.sqrt(1*1 + (y3 - y2)*(y3 - y2));
+		const path1_time 		= path1_Length / path1_averageSpeed;
+		const path2_time 		= path2_Length / path2_averageSpeed;
+		return (path1_time + path2_time);
+	};
+	const iterate = () => {
+		const yN_minus1 = paths[paths.length-1];
+		const yN = [];
+		yN[0] = yN_minus1[0]; yN[gridSize] = yN_minus1[gridSize];
+		for (let i = 1; i < gridSize; i++){
+			const up 	= getCostABC(yN_minus1[i-1], yN_minus1[i]-yChunk, yN_minus1[i+1], i);
+			const same 	= getCostABC(yN_minus1[i-1], yN_minus1[i]  		, yN_minus1[i+1], i);
+			const down 	= getCostABC(yN_minus1[i-1], yN_minus1[i]+yChunk, yN_minus1[i+1], i);
+			yN[i] = yN_minus1[i] + chooseFastest(up, same, down);
+		}
+		paths.push(yN);
+		renderPath(yN);
+	};
+
+	renderPath(paths[0]);
+	// setInterval(iterate, resolution * yChunk);
+	setInterval(iterate, 0);
+
+</script>
+</html>

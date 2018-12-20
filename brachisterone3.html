@@ -1,0 +1,207 @@
+<html><head><style>body{background-color: grey;}canvas{background-color: blue;}</style></head>
+<body>
+	<p>Q1. Does iterative step vs full range lookup, stabilise on the same end result?</p>
+	<p>Q2. Is the issue with the zero speed start / kink real or an artifact? - To Discuss</p>
+	<p>Q3. Can we iteratively increase gridSize / y delta to speed up (if on iterate) - YES, just need to interpolate into new grid seed</p>
+	<p>A1. Detect when full path stabilised at localised minumum for this resolution - DONE, but need to link to localised iterations only</p>
+	Grid Size = <text id="gridSize">TBC</text><br/>
+	Iterations= <text id="iterationCount">TBC</text><br/>
+	Path cost = <text id="currentCost">TBC</text><br/>
+	<button onclick="buttonPressed = true;calcTimer = setInterval(iterate, 0);renderPath(paths[paths.length-1]);">Obstacle penalty</button>
+	<button onclick="resUpgrade=true;">Res x2</button>
+	<button onclick="kinkFactor /= 2;">Kink x2</button>
+	<button onclick="kinkFactor *= 2;">Kink /2</button>
+<canvas id="visualiser"></canvas>
+</body>
+<script type="text/javascript">
+	"use strict";
+	// Set Up canvas
+	const canvas  = document.getElementById("visualiser");
+	const ctx = canvas.getContext("2d");
+	canvas.width 	= 1024; // 0 -> 1 Left to right
+	canvas.height 	= 1024; // 0 -> 1 down
+
+	// ShortCuts
+	const round 	= Math.round;
+	const abs 		= Math.abs;
+	const sqrt 		= Math.sqrt;
+	// const min 		= Math.min;
+	// const max 		= Math.max;
+	const average 	= (a,b) 	=> (a+b)/2;
+	const diffSqrd 	= (y1,y2)	=> {const diff = y2 - y1;return diff * diff;};
+	// const precision = () 		=> (paths.length||0)+1;
+	// const trunc 	= (x) 		=> round(x*10*precision())/10*precision();
+	const trunc 	= (x) 		=> round(x*10000000)/10000000;
+
+	// Constants and starting conditions
+
+	let kinkFactor=1000;
+	const maxPenalty= 1e10;
+	const G 		= 9.81;
+	const v0Sqrd 	= 2*G*0; 	// equivalent of starting with speed at ten pixel down
+	const A 		= 0.05;		// Percentage of height
+	const B 		= 0.15;		// Percentage of height
+
+	let gridSize 	= 8-1; // actually +1
+	let resolution 	= canvas.width / (gridSize + 1);
+	let paths 		= [];
+	let yDelta 		= 0.001;
+	let lastPathCost= 0;
+	let buttonPressed= true;
+	let resUpgrade	= false;
+
+	const interpolateFromLastGrid = () => {
+		const seedPathAtOldRes = paths.pop();
+		const oldGridSize = gridSize;
+		const y = [];
+		for (let i = 0; i <= oldGridSize; i++) {
+			y[i*2+0] = seedPathAtOldRes[i] * 2;
+			y[i*2+1] = seedPathAtOldRes[i]+seedPathAtOldRes[i+1];
+		}
+		paths.push(y);
+	};
+			// 2*seedPath[round(seedPath.length*i/gridSize)] : 0;
+	const seedViablePath = (seedPathAtNewRes) => {
+		const y = [];
+		for (let i = 0; i <= gridSize; i ++) {
+			y[i] = seedPathAtNewRes ? seedPathAtNewRes[i] : gridSize;
+		}
+		y[0] 		=      (A * gridSize);
+		y[gridSize] =      (B * gridSize);
+		paths = [];
+		paths.push(y);
+		document.getElementById("gridSize").innerText = gridSize + 1;
+	};
+
+	const renderPath = (y) => {
+		// NOTE : we may have wasted CPU time overiterating until checking here at render time
+		let pathCost 	= 0;
+		let pathTime 	= 0;
+		let pathLength 	= 0;
+		let pathKink 	= 0;
+		let thisKink;
+		canvas.width = canvas.width;
+		for (let j = 0; j <= gridSize; j++){
+			ctx.fillStyle = "red";
+			if (j < round(gridSize * 0.35)) ctx.fillRect(round(gridSize * 0.25) * resolution, j * resolution, resolution, resolution);
+			// if (j > round(gridSize * 0.30)) ctx.fillRect(round(gridSize * 0.25) * resolution, j * resolution, resolution, resolution);
+			if (j > round(gridSize * 0.30)) ctx.fillRect(round(gridSize * 0.50) * resolution, j * resolution, resolution, resolution);
+			if (j < round(gridSize * 0.35)) ctx.fillRect(round(gridSize * 0.75) * resolution, j * resolution, resolution, resolution);
+		}
+		for (let i = 0; i <= gridSize; i++){
+			if (i ===0 || i === gridSize) {
+				ctx.fillStyle = "red";
+			} else {
+				const costs = getCostABCatX(y[i-1], y[i], y[i+1], i, y);
+				ctx.fillStyle = "rgba("+gridSize*100*costs.time+","+gridSize*100*costs.length+","+gridSize*100*costs.kink+","+gridSize*100*costs.total+")";
+				pathCost 	+= costs.total 	|| 0;
+				pathTime 	+= costs.time 	|| 0;
+				pathLength 	+= costs.length || 0;
+				pathKink 	+= costs.kink  || 0;
+				thisKink = costs.kink  || 0;
+			}
+			ctx.fillRect(i * resolution, y[i] * resolution, resolution, resolution);
+			// ctx.fillRect(i * resolution, pathKink * 10, resolution, resolution);
+			ctx.fillStyle = "black";
+			ctx.fillRect(i * resolution, canvas.height*0.5-thisKink * 20000, resolution, resolution);
+			// console.log(pathKinkS);
+		}
+
+		const lastDelta = trunc(pathCost - lastPathCost);
+		document.getElementById("iterationCount").innerText = paths.length;
+		document.getElementById("currentCost").innerHTML = trunc(pathCost) + "<br/>time = " + trunc(pathTime) + "<br/>length = " + trunc(pathLength) + "<br/>kink = " + trunc(pathKink);
+
+		if (resUpgrade || (lastDelta === 0 && pathCost < maxPenalty && (gridSize) < canvas.width)){
+
+			resUpgrade=false;
+			interpolateFromLastGrid();
+			gridSize = (gridSize + 1)*2 - 1;
+			resolution= canvas.width / (gridSize + 1);
+			// paths = [];
+			seedViablePath(paths.pop());
+			document.getElementById("gridSize").innerText = gridSize + 1;
+		}
+		lastPathCost = pathCost;
+		if (gridSize >= canvas.width && !buttonPressed) {clearInterval(calcTimer);console.log("DONE!");}
+		else 											{window.requestAnimationFrame(() =>renderPath(paths[paths.length-1]));}
+	};
+
+	const diff1PathAtX = (yN,x) => yN[x] - yN[x-1];
+	const diff2PathAtX = (yN,x) => diff1PathAtX[x+1] - diff1PathAtX[x];
+
+	const getCostABCatX = (y1, y2, y3, i, surroundingCurve) => {
+		if (y2 <= 0 || y2 >= gridSize) 									{return {total:maxPenalty};}
+		if (buttonPressed){
+			if (i === round(gridSize *0.25) && y2 < gridSize * 0.35) 	{return {total:maxPenalty-0.5*(y2 / (gridSize * 0.35))*maxPenalty};}
+			// if (i === round(gridSize *0.25) && y2 > gridSize * 0.30) 	{return {total:maxPenalty-0.5*((gridSize * 0.30) / y2)*maxPenalty};}
+			if (i === round(gridSize *0.50) && y2 > gridSize * 0.30) 	{return {total:maxPenalty-0.5*((gridSize * 0.30) / y2)*maxPenalty};}
+			if (i === round(gridSize *0.75) && y2 < gridSize * 0.35) 	{return {total:maxPenalty-0.5*(y2 / (gridSize * 0.35))*maxPenalty};}
+		}
+
+		const path1_averageSpeed 	= sqrt(v0Sqrd + 2*G * average(y1/gridSize, y2/gridSize));
+		const path2_averageSpeed 	= sqrt(v0Sqrd + 2*G * average(y2/gridSize, y3/gridSize));
+
+		if (path1_averageSpeed <= 0 || path2_averageSpeed <= 0) 		{return {total:maxPenalty};}
+
+		const path1_Length 			= sqrt((1/gridSize)*(1/gridSize) + diffSqrd(y1/gridSize,y2/gridSize));
+		const path2_Length 			= sqrt((1/gridSize)*(1/gridSize) + diffSqrd(y2/gridSize,y3/gridSize));
+		const path1_time 			= path1_Length / path1_averageSpeed;
+		const path2_time 			= path2_Length / path2_averageSpeed;
+
+		let costForSegmentABC = (path1_time + path2_time) ;
+		const y0 = surroundingCurve[i-2];
+		const y4 = surroundingCurve[i+2];
+		const kinkLeft 	= ((y2-y1) - (y1-y0));
+		const kinkRight = ((y4-y3) - (y3-y2));
+		// let kinkSum 	= sqrt(kinkLeft*kinkLeft + kinkRight*kinkRight) / (gridSize*kinkFactor); //
+		let kinkSum 	= (kinkLeft*kinkLeft + kinkRight*kinkRight) / (gridSize*gridSize*kinkFactor); //
+		// let kinkSum 	= +abs(kinkLeft - kinkRight)/100;
+		if (i < gridSize*.2 || i > gridSize*.8) kinkSum = 0;
+		// if (kinkSum < 0.5) kinkSum = 0;
+		// else console.log(kinkSum);
+
+		return {
+			time 	: path1_time 	+ path2_time,
+			length 	: path1_Length 	+ path2_Length,
+			kink 	: kinkSum,
+			// total 	: costForSegmentABC
+			total 	: costForSegmentABC + kinkSum
+			// total 	: path1_Length 	+ path2_Length
+		};
+	};
+
+	const recursivelyPeturbWhileLowersCost = (yN_minus1, y, currentCostForElement, i, perturbationDirection, recursionCount) => {
+		const nextElement = y + yDelta * perturbationDirection;
+		// console.log(y, nextElement, i, perturbationDirection);
+		const costObj = getCostABCatX(yN_minus1[i-1], nextElement, yN_minus1[i+1], i, yN_minus1);
+		const costNextElement = costObj.total;
+		// If IMPORVEMENT OR BOTH INVALID
+		const outsideBoundary 				= (nextElement <= 0 || nextElement >= gridSize);
+		const perturbationRemainsOnObstacle = (costNextElement === maxPenalty && currentCostForElement === maxPenalty);
+		if 		(outsideBoundary) 															{return y;}
+		// else if (costObj.kink > 0.001 && recursionCount++ > 2) 									{return y;} // ie don't look too far if straighenting a kink
+		// else if (costObj.kink && recursionCount++ > (10/costObj.kink)) 									{return y;} // ie don't look too far if straighenting a kink
+		else if (recursionCount++ > 10) 													{return y;} // ie don't look too far if straighenting a kink
+		// else if (recursionCount++ > 10000) 													{return y;} // ie don't look too far if straighenting a kink
+		else if (costNextElement < currentCostForElement || perturbationRemainsOnObstacle)	{return recursivelyPeturbWhileLowersCost(yN_minus1, nextElement, costNextElement, i, perturbationDirection, recursionCount);}
+		else 																				{return y;}
+	};
+
+	const iterate = () => {
+		const yN_minus1 = paths[paths.length-1];
+		const yN = [];
+		yN[0] = yN_minus1[0]; yN[gridSize] = yN_minus1[gridSize];
+		for (let i = 1; i < gridSize; i++){
+			yN[i] = yN_minus1[i];
+			yN[i] = recursivelyPeturbWhileLowersCost(yN_minus1, yN[i], getCostABCatX(yN_minus1[i-1], yN[i], yN_minus1[i+1], i, yN_minus1).total, i, -1, 0);
+			yN[i] = recursivelyPeturbWhileLowersCost(yN_minus1, yN[i], getCostABCatX(yN_minus1[i-1], yN[i], yN_minus1[i+1], i, yN_minus1).total, i, +1, 0);
+		}
+		paths.push(yN);
+	};
+
+	seedViablePath();
+	renderPath(paths[0]);
+	let calcTimer = setInterval(iterate, 0);
+	// setInterval(()=>renderPath(paths[paths.length-1]), 20);
+</script>
+</html>

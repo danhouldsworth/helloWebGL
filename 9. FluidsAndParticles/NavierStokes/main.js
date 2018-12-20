@@ -8,7 +8,7 @@ let actualWidth, actualHeight;
 let body;
 
 let obstaclePosition    = [0,0];
-let obstacleRad         = 50;//25;
+let obstacleRad         = 10;//25;
 let movingObstacle      = false;
 
 let lastMouseCoordinates= [0,0];
@@ -167,7 +167,7 @@ function resetWindow(){
     // const canvas    = document.getElementById("glcanvas");
     const display = document.getElementById("display");
 
-    actualWidth     = 1000;//body.clientWidth;
+    actualWidth     = 2000;//body.clientWidth;
     actualHeight    = 0.5 * actualWidth;
 
     width   = actualWidth;//500;
