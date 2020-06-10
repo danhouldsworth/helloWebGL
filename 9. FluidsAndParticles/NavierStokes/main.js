@@ -8,7 +8,7 @@ let actualWidth, actualHeight;
 let body;
 
 let obstaclePosition    = [0,0];
-let obstacleRad         = 10;//25;
+let obstacleRad         = 50;//25;
 let movingObstacle      = false;
 
 let lastMouseCoordinates= [0,0];
@@ -227,16 +227,16 @@ function resetWindow(){
     GPU.initTextureFromData("pressure",             width, height, "FLOAT", pressure);  GPU.initFrameBufferForTexture("pressure");
     GPU.initTextureFromData("nextPressure",         width, height, "FLOAT", pressure);  GPU.initFrameBufferForTexture("nextPressure");
 
-    let numCols = 100;
-    if (numCols%2 === 1) numCols--;
-    const numPx = actualHeight / numCols;
+    // let numCols = 100;
+    // if (numCols%2 === 1) numCols--;
+    // const numPx = actualHeight / numCols;
 
     const material = new Float32Array(actualWidth * actualHeight * 4);
     for (let i = 0; i < actualHeight; i++){
         for (let j = 0; j < actualWidth; j++){
             const index = 4 * (i * actualWidth + j);
             // if (Math.floor((i - 2) / numPx)%5 === 0) material[index] = 1.0;
-            if (i%20 < 3) material[index] = 1.0;
+            if (i%15 < 4) material[index] = 1.0;
         }
     }
     GPU.initTextureFromData("material",     actualWidth, actualHeight, "FLOAT", material);  GPU.initFrameBufferForTexture("material");
