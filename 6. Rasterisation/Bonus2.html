@@ -4,10 +4,10 @@
 	attribute 	float a_label;
 	varying 	vec2 v_bilerp;
 	void main(void){
-		if 		(a_label == 1.0){gl_Position = vec4(-0.5, -0.5, 0.0, 1.0); v_bilerp = gl_Position.xy;}
-		else if (a_label == 2.0){gl_Position = vec4(-0.5, +0.5, 0.0, 1.0); v_bilerp = gl_Position.xy;}
-		else if (a_label == 3.0){gl_Position = vec4(+0.5, -0.5, 0.0, 1.0); v_bilerp = gl_Position.xy;}
-		else if (a_label == 4.0){gl_Position = vec4(+0.5, +0.5, 0.0, 1.0); v_bilerp = gl_Position.xy;}
+		if 		(a_label == 1.0){gl_Position = vec4(-1.0, -1.0, 0.0, 1.0); v_bilerp = gl_Position.xy;}
+		else if (a_label == 2.0){gl_Position = vec4(-1.0, +1.0, 0.0, 1.0); v_bilerp = gl_Position.xy;}
+		else if (a_label == 3.0){gl_Position = vec4(+1.0, -1.0, 0.0, 1.0); v_bilerp = gl_Position.xy;}
+		else if (a_label == 4.0){gl_Position = vec4(+1.0, +1.0, 0.0, 1.0); v_bilerp = gl_Position.xy;}
 	}
 </script>
 
@@ -17,9 +17,9 @@
 	void main(void){
 		float inSet;
 		float temp;
-		vec2 c = v_bilerp * 3.0 - vec2(1.0,0.0);
+		vec2 c = v_bilerp * 0.5 - vec2(1.0,0.0);
 		vec2 z = c;
-		for (int i = 0; i < 2000; i++){
+		for (int i = 0; i < 20000; i++){
 			temp = z.x; z.x = z.x * z.x - z.y * z.y + c.x; z.y = 2.0 * temp * z.y + c.y;
 		}
 		inSet = (dot(z, z) < 4.0) ? 1.0 : 0.0;

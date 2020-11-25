@@ -5,7 +5,7 @@ precision mediump float;
 const   vec3    blandColour         = normalize(vec3(1.0, 1.0, 1.0)); // White
 const   int     num_Lights          = 2;
 const   int     num_Spheres         = 2;//5;
-const   int     num_Ellipses        = 1;//3
+const   int     num_Ellipses        = 1;//3;
 const   int     maxReflections      = 4;
 
 const   float   PI                  = 3.141;//3.14159265359;
