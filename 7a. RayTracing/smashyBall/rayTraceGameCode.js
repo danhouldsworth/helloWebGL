@@ -213,8 +213,8 @@ function drawScene() {
         players[1].tagged = true;
         players[0].tagged = false;
     }
-    // if (players[0].tagged) players[0].size *= 0.999; else players[0].size *= 1.001;
-    // if (players[1].tagged) players[1].size *= 0.999; else players[1].size *= 1.001;
+    if (players[0].tagged) players[0].size *= 0.999; else players[0].size *= 1.001;
+    if (players[1].tagged) players[1].size *= 0.999; else players[1].size *= 1.001;
 
     // Here we set orientation as function (position)
     // players[0].orientation.x =  players[0].pos.z / players[0].size;
@@ -278,9 +278,9 @@ function drawScene() {
     uniform3fv("sphereCol", [ // Although size is more of a permenent attribute, it's convenient to pass around as one var for collision detection
         players[0].tagged? 1.0 : 0.0,  players[0].tagged? 0.0 : 1.0,  0.0,
         players[1].tagged? 1.0 : 0.0,  0.0,  players[1].tagged? 0.0 : 1.0,
-        // 1.0,  0.0,  1.0,
-        // 0.0,  1.0,  1.0,
-        // 0.0,  1.0,  0.0
+        1.0,  0.0,  1.0,
+        0.0,  1.0,  1.0,
+        0.0,  1.0,  0.0
     ]);
     // players[0].pos.x = 2*PI*(5/6)*cos(9*t);
     // players[1].pos.z = 2*PI*(5/6)*sin(9*t);
@@ -300,19 +300,20 @@ function drawScene() {
     ]);
 
     uniform3fv("ellipsoidCentres",      [
+        25.0*cos(t+4*PI/3),     5,    25.0*sin(t+4*PI/3),
         // 10.0*cos(t+4*PI/3),     (2*3)+1,    10.0*sin(t+4*PI/3),
         // 15.0*cos(t+2*PI/3),     2,          15.0*sin(t+2*PI/3),
-        20.0*cos(t+0*PI/3),     5,          20.0*sin(t+0*PI/3)
+        // 20.0*cos(t+0*PI/3),     5,          20.0*sin(t+0*PI/3)
     ]);
     uniform3fv("ellipsoidSizes",        [
-        // 2,  3,  1,
+        1,  5,  5,
         // 5,  3,  2,
-        5,  1,  5
+        // 5,  1,  5
     ]);
     uniform3fv("ellipsoidColours",        [
-        // 1.0,  0.0,  0.0,
+        1.0,  0.0,  0.0,
         // 0.0,  1.0,  0.0,
-        0.0,  0.0,  1.0
+        // 0.0,  0.0,  1.0
     ]);
     let ang = 0.1*PI/4;
     // NOT just 3rd axis, but Z axis particularly. Suggesting it's the ordering of the way I'm compounding rotations
@@ -331,12 +332,12 @@ function drawScene() {
         eg. Becomes a challenge of QUESTION ARTICULATION :
         If we want a penny wheel rolling around, AND tilting towards middle
         */
-        // 2*6*t+PI/2,             t+4*PI/3,           0,
+        2*6*t+PI/2,             t+4*PI/3,           0,
         // 0,                      (1-6)*t + PI/6,     0,
         // (20/4)*t,                  t,               0
         // t,0,PI/2 // Z first, but rotates frame too, so Y 2nd in new frame, then X last
-        // (20/4)*t,t,0
-        0,10*t,(PI/4)
+        // (20/4)*t,t,0,
+        // 0,10*t,(PI/4)
     // 0,t*2,t
     // t,0,0
     ]);
