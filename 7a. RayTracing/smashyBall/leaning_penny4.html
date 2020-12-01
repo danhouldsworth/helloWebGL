@@ -1,0 +1,547 @@
+<html><head><style>body {background-color: black;}</style></head><body></body>
+<script id="x-fragment" type="x-shader">#version 300 es
+    // KNOWN bug in array initialisation at global scope
+    precision mediump float;
+    const   vec3    blandColour         = normalize(vec3(1.0, 1.0, 1.0)); // White
+    const   int     num_Lights          = 2;
+    const   int     num_Spheres         = 1; // In VERTEX SHADER TOO // SEE getSphereParam
+    const   int     num_Ellipses        = 1; // In VERTEX SHADER TOO // SEE getSphereParam
+    const   int     maxReflections      = 4;
+
+    const   float   eppsilon            = 0.1;                     // Prevents noise from rays/shadows skimming surface
+
+            mat3    mRx, mRy, mRz;
+            mat3    mRxT, mRyT, mRzT;
+
+            int     cumulativeReflections = 0;
+
+    uniform vec3    ellipsoidCentres[num_Ellipses];
+    uniform vec3    ellipsoidSizes[num_Ellipses];
+    uniform vec4    ellipsoidOrientations[num_Ellipses];
+
+    uniform vec3    sphereCol[num_Spheres];
+    uniform vec4    spherePos[num_Spheres];
+    uniform vec4    sphereOrientations[num_Spheres];
+
+    uniform vec3    cameraPostion;
+
+    uniform float   ambience;
+    uniform float   incidentIllumination;
+    uniform float   polish;
+    uniform float   lampBrightness;
+    uniform float   mscale;
+
+    in          vec3    vPosition;
+    out         vec4    outputColour;
+
+    mat3 rotation(vec4 orientation){
+        // http://nghiaho.com/?page_id=846
+        // Note ranges to faithfully undo / decompose matrix
+        // ThetaX : -PI   -> PI
+        // ThetaY : -PI/2 -> PI/2
+        // ThetaZ : -PI   -> PI
+        // However this does not treat all axis the same - see http://planning.cs.uiuc.edu/node102.html
+        // With mRx * mRy * mRz  Rx is local but subsequent axes are also rotated wrt global
+        // A quick fix is to add 4th orientation parameter for 2nd rot about x (global)
+
+
+
+        mat3 mRx = mat3(
+            +1.0,       +0.0,        +0.0,
+            +0.0,       +cos(orientation.x),   -sin(orientation.x),
+            +0.0,       +sin(orientation.x),   +cos(orientation.x)
+        );
+        mat3 mRy = mat3(
+            +cos(orientation.y),  +0.0,       -sin(orientation.y),
+            +0.0,       +1.0,       +0.0,
+            +sin(orientation.y),  +0.0,       +cos(orientation.y)
+        );
+        mat3 mRz = mat3(
+            +cos(orientation.z),  -sin(orientation.z),  +0.0,
+            +sin(orientation.z),  +cos(orientation.z),  +0.0,
+            +0.0,       +0.0,       +1.0
+        );
+         mat3 mRx2 = mat3(
+            +1.0,       +0.0,        +0.0,
+            +0.0,       +cos(orientation.w),   -sin(orientation.w),
+            +0.0,       +sin(orientation.w),   +cos(orientation.w)
+        );
+
+        return mRx * mRy * mRz * mRx2;
+//        return mRy * mRz  * mRx;
+//        return mRx * mRz  * mRy;
+    }
+    mat3 reverseRotation(vec4 orientation){
+        mat3 mRxT = mat3(
+            +1.0,       +0.0,        +0.0,
+            +0.0,       +cos(orientation.x),   +sin(orientation.x),
+            +0.0,       -sin(orientation.x),   +cos(orientation.x)
+        );
+        mat3 mRyT = mat3(
+            +cos(orientation.y),  +0.0,       +sin(orientation.y),
+            +0.0,       +1.0,       +0.0,
+            -sin(orientation.y),  +0.0,       +cos(orientation.y)
+        );
+        mat3 mRzT = mat3(
+            +cos(orientation.z),  +sin(orientation.z),  +0.0,
+            -sin(orientation.z),  +cos(orientation.z),  +0.0,
+            +0.0,       +0.0,       +1.0
+        );
+        mat3 mRx2T = mat3(
+            +1.0,       +0.0,        +0.0,
+            +0.0,       +cos(orientation.w),   +sin(orientation.w),
+            +0.0,       -sin(orientation.w),   +cos(orientation.w)
+        );
+
+
+
+        return mRx2T * mRzT * mRyT * mRxT;
+//        return mRxT * mRzT * mRyT;
+//        return mRyT * mRzT * mRxT ;
+    }
+
+
+
+    bool testIntersectsEllipsoid(int i, vec3 rayStart, vec3 rayDirection, out float distance) {
+        // What we actually need is spheroid x,y,z a,b,c a1,a2,a3
+        // Example : http://cudaopencl.blogspot.com/2012/12/ellipsoids-finally-added-to-ray-tracing.html
+        distance = 9999999.0;                                       // Convenient fudge for comparing closeness
+        vec3 rayInEllipsoidFrame= rotation(ellipsoidOrientations[i]) * rayDirection;
+        vec3 toEllipsoid        = rotation(ellipsoidOrientations[i]) * (ellipsoidCentres[i] - rayStart);
+        float a = dot(rayInEllipsoidFrame   / ellipsoidSizes[i],    rayInEllipsoidFrame / ellipsoidSizes[i]);
+        float b = dot(rayInEllipsoidFrame   / ellipsoidSizes[i],    toEllipsoid         / ellipsoidSizes[i]);
+        float c = dot(toEllipsoid           / ellipsoidSizes[i],    toEllipsoid         / ellipsoidSizes[i]);
+        float gapSqd = 4.0 * (a*c - b*b - a);
+        if ( gapSqd > 0.0) return false;                            // Miss
+
+        float d = sqrt(-gapSqd);
+
+        float t1 = (2.0 * b - d) / (2.0 * a);
+        float t2 = (2.0 * b + d) / (2.0 * a);
+        if (t1 < eppsilon && t2 < eppsilon) return false;           // Both behind us
+        if (t1 < eppsilon || t2 < eppsilon) distance = t2;          // Inside object (use furthest) ???
+        else                                distance = t1;          // Whole object in front (Use closest)
+        return true;
+    }
+
+    bool testIntersectsSphere(vec4 sphere, vec3 rayStart, vec3 rayDirection, out float distance) {
+        /*
+            DIAGRAM : https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
+            Also SEPERATELY consider refraction / transparency : https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
+            Need to think through : refraction / reflection / total internal relfection
+            Air / water refraction index
+            Both surfaces not just first hit
+            Muxing both reflection and refraction
+        */
+        distance = 9999999.0;                                       // Convenient fudge for comparing closeness
+
+        vec3    toSphere = sphere.xyz - rayStart;
+        float   hyp = length(toSphere);                             // Hypoternuse (of triangle between eye / sphereCenter / closest ray path)
+        float   adj = dot(rayDirection, toSphere);                  // Adjacent (toSphere projected onto line in direction of ray)
+        float   oppSqd = hyp*hyp - adj*adj;                         // Opposite (distance from centre to closest pass)
+        float   gapSqd = oppSqd - sphere.w * sphere.w;              // How much do we miss by?
+                                                                    // We store sphere radius in .w
+
+        // if (adj < 0.0) return false;                                // Sphere is behind the ray
+        if (gapSqd > 0.0) return false;                             // Miss the sphere
+        /* We've hit
+            Conveniently, due to geometry, the smaller triangle interection / closest pass / centre has
+            hyp = radius , opp = opp
+            So delta from intersection from closest path (ie the amount on our ray path we fall short of closest path due to intersection = sqrt(-gapSqd)
+        */
+        float d = sqrt(-gapSqd);
+
+        float t1 = adj - d;
+        float t2 = adj + d;
+        if (t1 < eppsilon && t2 < eppsilon) return false;           // Both behind us
+        if (t1 < eppsilon || t2 < eppsilon) distance = t2;          // Inside object (use furthest)
+        else                                distance = t1;          // Whole object in front (Use closest)
+        return true;
+    }
+
+    /*
+        Returns TRUE if pt of interest interects with SPHERE before LIGHT SOURCE
+        Returns FALSE if unobstructed path to light source
+    */
+    bool visibleToLightSource(vec3 lStart, vec3 lightSourceDirection) {
+        float d_dummy;
+        for (int i = 0; i < num_Spheres; i++)
+            if (testIntersectsSphere(spherePos[i], lStart, -lightSourceDirection, d_dummy)) return false;   // Back towards the light source
+
+        for (int i = 0; i < num_Ellipses; i++)
+            if (testIntersectsEllipsoid(i, lStart, -lightSourceDirection, d_dummy)) return false;                  // Test hardcoded ellipsoid // **** NEED TO PASS ELLIPSE OR INDEX ?!?!!
+        return true;
+    }
+
+    /* NOTE :
+        The LightSource is NOT SUCCESSIVELY raycasted, only the camera rays.
+        Specifically:
+            We DO   get successive reflections of the LightSource (and the ambient & incidentIllumination we can see in those reflections) as seen STARTING FROM THE CAMERA
+            We DONT get incidentIllumination from LightSource reflections ONTO THIS POINT from the light source
+
+        The shinyer our model, the more realistic it becomes
+        Whereas as 'incidentIllumination' becomes material, then the diverge from real physics (where ambient is made from mulitple indicent illuminations)
+    */
+    float lightAt(vec3 instersectNormal, vec3 rayDirection, vec3 intersectPosition) {
+
+        vec3    lightSourceRay[num_Lights];
+        vec3    physicalLightSourceReflectionFromThisPt[num_Lights];
+        float   lightSourceBrightness[num_Lights];
+        float   visibleLightReflection[num_Lights];
+        float   lightLevelFromPt = ambience;
+        // float   lightLevelFromPt        = 0.0;                                              // Initialised = Ambience. Light that evenly permeates everywhere (kills shadows)
+        // float   incidentIllumination    = 0.1;                                              // LightSource illumination of facing incidence (visible from every angle)
+        // float   polish                  =50.0;                                              // Infinitly shiny will faithly reflect LightSource as point. Unpolished will reflect from more points
+                                                                                            // >1 increases saturation area away from exact LightSource
+        lightSourceBrightness[0]  =lampBrightness; lightSourceRay[0] = normalize(vec3(+0.0, -1.0, -1.0)); // Pass in as uniforms from JS
+        lightSourceBrightness[1]  =lampBrightness; lightSourceRay[1] = normalize(vec3(-1.0, -1.0, +0.0));
+
+        for (int i = 0; i < num_Lights; i++){
+            physicalLightSourceReflectionFromThisPt[i] = reflect(lightSourceRay[i], instersectNormal);
+            visibleLightReflection[i] = dot(-physicalLightSourceReflectionFromThisPt[i], rayDirection);
+            if (visibleToLightSource(intersectPosition, lightSourceRay[i]))                        // If LightSource visible DUE TO SURFACE ORIENTATION
+                lightLevelFromPt  += lightSourceBrightness[i] * (
+                            + dot(-lightSourceRay[i], instersectNormal) * incidentIllumination    // Visible LightSource illumination
+                            + pow(max(0.0,visibleLightReflection[i]), polish)                     // Visible LightSource reflection
+                        );
+        }
+
+        return lightLevelFromPt;
+    }
+
+    /*
+        Returns TRUE if the ray interects with something visible, to enable successive reflections
+        Returns FALSE if no further reflections
+    */
+    bool reflectIfIntersectWorld(vec3 lStart, inout vec3 rayDirection, out vec3 intersectPosition, inout vec3 endColour, inout float cumulativeDistance) {
+        vec3 instersectNormal, collisionColor, ballCenter,  ellipsoidCentre, ellipsoidSize;
+        vec4 sphereOrientation, ellipsoidOrientation;
+        float   d[num_Spheres], distance = 0.0;
+        bool    h[num_Spheres], ground = false, ceiling = false, ellipsoid = false;
+        int     lastSphere  = num_Spheres - 1;
+        int     lastEllipse = num_Ellipses - 1;
+
+
+        for (int i = 0; i < num_Spheres; i++)
+            h[i] = testIntersectsSphere(spherePos[i], lStart, rayDirection, d[i]);
+
+        for (int i = 0; i < num_Spheres; i++){
+            if (!h[i])  continue;                                   // We didn't hit this ball, move to the next
+            if (i == lastSphere) {                                  // If it's the last ball then choose this
+                distance            = d[i];
+                //collisionColor      = blandColour;//sphereCol[i];
+                ballCenter          = spherePos[i].xyz;
+                sphereOrientation   = sphereOrientations[i];
+            }
+            for (int j = i+1; j < num_Spheres; j++){
+                if (d[i] > d[j]) break;                             // If ANY OTHER ball is nearer consider next
+                if (j == lastSphere) {
+                    distance            = d[i];
+                    //collisionColor      = blandColour;//sphereCol[i];
+                    ballCenter          = spherePos[i].xyz;
+                    sphereOrientation   = sphereOrientations[i];
+                    i = num_Spheres;                                // If ALL of the other balls are further than choose this and BREAK OUT
+                }
+            }
+        }
+        // resuse h[] / d[] num_Ellipses < spheres
+        for (int i = 0; i < num_Ellipses; i++)
+            h[i] = testIntersectsEllipsoid(i, lStart, rayDirection, d[i]);                    // **** NEED TO PASS ELLIPSE OR INDEX ?!?!!
+
+      for (int i = 0; i < num_Ellipses; i++){
+          if (!h[i] || (distance > 0.0 && d[i] > distance))  continue;                // We didn't hit this ellipse OR have a nearer sphere, move to the next
+          if (i == lastEllipse) {                                 // If not, and it's the last ellpise then choose this
+              distance            = d[i];
+              ellipsoidCentre     = ellipsoidCentres[i];
+              ellipsoidOrientation= ellipsoidOrientations[i];
+              ellipsoidSize       = ellipsoidSizes[i];
+              ellipsoid = true;
+          }
+          for (int j = i+1; j < num_Ellipses; j++){
+              if (d[i] > d[j]) break;                             // If ANY OTHER ball is nearer consider next
+              if (j == lastEllipse) {
+                  distance            = d[i];
+                  ellipsoidCentre     = ellipsoidCentres[i];
+                  ellipsoidOrientation= ellipsoidOrientations[i];
+                  ellipsoidSize       = ellipsoidSizes[i];
+                  ellipsoid = true;
+                  i = num_Ellipses;                                // If ALL of the other balls are further than choose this and BREAK OUT
+              }
+          }
+      }
+
+        if (distance == 0.0){ // untouched
+            if (rayDirection.y < 0.0)   {distance = -lStart.y / rayDirection.y; ground = true;}
+            else return false;                                      // Didn't hit anything, and moving UP away from floor
+        }
+
+        intersectPosition   = lStart + distance * rayDirection;
+
+        // NOTE : we don't plan for objects below the surface. They will render INSTEAD of the ground
+        if (ground){
+            float r     = length(intersectPosition.xz);
+            float theta = atan(intersectPosition.z, intersectPosition.x);
+
+            if (r > 100.0) {
+                return false;
+                } else 
+            
+
+            {
+                instersectNormal = vec3(0.0,1.0,0.0);
+//                if (fract(intersectPosition.x) > 0.5 == fract(intersectPosition.z) > 0.5)   collisionColor = vec3(1.0,1.0,1.0);
+//                else                                                                        collisionColor = vec3(0.5, 0.5, 0.3);
+                collisionColor = vec3(0.3, 0.3, 0.3);
+
+                // **** replace this with fractal evaluation 
+
+
+                vec2    z, c, z_target;
+                z_target = vec2(-0.14348, 1.018937 );
+                float magn, dwell, col;
+                float maxdwell = 1000.0;
+                float cycle = 1.0;
+                float PI = 3.1415927;
+                z = c = mscale * vec2(intersectPosition.x, intersectPosition.z) + z_target;
+                for (float i = 0.0; i < maxdwell; i++){
+                    z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + c;
+                    if (dot(z, z) > 4.0) {
+//                        collisionColor = vec3(mod(i, 10.0) / 10.0,  mod(i, 100.0) / 100.0,   mod(i, 1000.0) / 1000.0);
+                        z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + c;   // a couple of extra iterations helps
+                        z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + c;   // decrease the size of the error term.
+                        magn = length(z);
+                        dwell = i + (log(log(magn)))/log(2.0);
+                        col = log(dwell);  
+
+
+//                        collisionColor = vec3(mod(col, 1.0) ,  mod(col+0.33, 1.0) ,   mod(col+0.66, 1.0) );
+                        collisionColor = vec3(0.5*sin(col)+0.5 ,0.5*sin(col+2.0*PI/3.0)+0.5, 0.5*sin(col+4.0*PI/3.0)+0.5);
+                        if (r > 20.0 && r < 21.0) { collisionColor *=0.9;}
+                        break;
+                        }    
+                    }
+ 
+               //  **** end of fractal ground
+                    }
+        } else if (ellipsoid) {
+            // Rotate frame until our ellipsoid axis line up with frame. Calc normal. Then reverse transform back to world
+            instersectNormal    = reverseRotation(ellipsoidOrientation) * normalize(rotation(ellipsoidOrientation) * (intersectPosition-ellipsoidCentre)*2.0 / (ellipsoidSize * ellipsoidSize));
+            collisionColor      = rotation(ellipsoidOrientation) * normalize(intersectPosition-ellipsoidCentre);
+        } else {
+            instersectNormal    = normalize(intersectPosition - ballCenter);
+            collisionColor      =  rotation(sphereOrientation) * normalize(intersectPosition - ballCenter); // Transform for INDIVIDUAL sphere orientation
+        }
+
+        cumulativeDistance += distance;                                                                 // Keep a track of how much air travelled through
+        cumulativeReflections++;
+        endColour += lightAt(instersectNormal, rayDirection, intersectPosition) * collisionColor / float(cumulativeReflections);  // Get brightness [NOTE : Currently blind as to where the point is in space!!]
+        rayDirection = reflect(rayDirection, instersectNormal);                                         // Finally, reflect the ray off the surface hit for onward tracing
+        return true;
+    }
+
+    void main(void) {
+        vec3 rayDirection   = normalize(vPosition - cameraPostion);
+        vec3 endColour      = vec3(0.0, 0.0, 0.0);
+        vec3 intersectPosition[maxReflections];
+        float cumulativeDistance = 0.0;
+
+        // At least in WebGL1 we need array indexes to be constants. Appears an int within a loop works. But not a global int like cumulativeReflections
+        intersectPosition[0] = cameraPostion;
+        for (int i = 0; i < maxReflections; i++)
+            if (!reflectIfIntersectWorld(intersectPosition[i], rayDirection, intersectPosition[i+1], endColour, cumulativeDistance)) break;
+
+        //endColour /= cumulativeDistance * cumulativeDistance * 0.0005;                                  // Proxy for ether occulsivity
+        endColour /= float(cumulativeReflections);                                                      // Proxy for averaging rather than adding reflections
+        endColour = mix(endColour, vec3(1.0,1.0,1.0), max(0.0,min(length(endColour)-1.0, 1.0)));        // Ensure oversaturation BLOOMS to white
+        outputColour = vec4(endColour, 1.0);
+    }
+</script>
+<script id="x-vertex" type="x-shader">#version 300 es
+    precision mediump float;
+
+    uniform     float   u_ratio;
+    uniform     vec3    cameraPostion;
+    uniform     vec3    cameraTo;
+
+    in          float   a_label;
+    out         vec3    vPosition;
+
+    void main(void) {
+        // <-- Calculate the corners of our view port based on camera, and rasterise into frag shader
+        vec3 up         = vec3(0.0, 1.0, 0.0);
+        float cameraPersp = 5.0;
+        vec3 cameraDir  = normalize(cameraTo - cameraPostion);
+        vec3 cameraLeft = normalize(cross(cameraDir, up));
+        vec3 cameraUp   = normalize(cross(cameraLeft, cameraDir));
+        vec3 cameraCenter= cameraPostion + cameraDir * cameraPersp;
+        vec3 cameraTopLeft  = cameraCenter + cameraUp + cameraLeft * u_ratio;
+        vec3 cameraBotLeft  = cameraCenter - cameraUp + cameraLeft * u_ratio;
+        vec3 cameraTopRight = cameraCenter + cameraUp - cameraLeft * u_ratio;
+        vec3 cameraBotRight = cameraCenter - cameraUp - cameraLeft * u_ratio;
+
+        if      (a_label == 1.0) {gl_Position = vec4(+1.0, +1.0, 0.0, 1.0); vPosition = cameraTopRight;}
+        else if (a_label == 2.0) {gl_Position = vec4(-1.0, +1.0, 0.0, 1.0); vPosition = cameraTopLeft;}
+        else if (a_label == 3.0) {gl_Position = vec4(+1.0, -1.0, 0.0, 1.0); vPosition = cameraBotRight;}
+        else if (a_label == 4.0) {gl_Position = vec4(-1.0, -1.0, 0.0, 1.0); vPosition = cameraBotLeft;}
+        // -->
+    }
+</script>
+<script>
+    const canvas  = document.createElement("canvas"); document.body.appendChild(canvas);
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const gl = canvas.getContext("webgl2");
+
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vertexShader, document.getElementById("x-vertex").text);
+    gl.compileShader(vertexShader);
+
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fragmentShader, document.getElementById("x-fragment").text);
+    gl.compileShader(fragmentShader);
+
+    const shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+    gl.useProgram(shaderProgram);
+
+    const uniform = (uniformType, uniformName, valueObj) => gl["uniform" + uniformType](gl.getUniformLocation(shaderProgram, uniformName), valueObj);
+    const uniform1f     = (uniformName, valueObj) => uniform("1f", uniformName, valueObj);
+    const uniform3fv    = (uniformName, valueObj) => uniform("3fv", uniformName, valueObj);
+    const uniform4fv    = (uniformName, valueObj) => uniform("4fv", uniformName, valueObj);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.vertexAttribPointer(gl.getAttribLocation(shaderProgram, "a_label"), 1, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "a_label"));
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([1,2,3,4]), gl.STATIC_DRAW);
+    uniform1f(  "u_ratio", (canvas.width / canvas.height));
+    // uniform3fv( "sphereCol", [
+    //     0.5, 0.0, 0.0,
+    //     0.0, 0.5, 0.0,
+    //     0.0, 0.0, 0.5,
+    //     0.5, 0.5, 0.0,
+    //     0.0, 0.5, 0.5,
+    // ]);
+    // uniform3fv("ellipsoidSizes", [
+    //     10.0, 1.0, 4.0,
+    //     10.0, 1.0, 4.0,
+    //     10.0, 1.0, 4.0
+    // ]);
+
+    const sin   = Math.sin;
+    const cos   = Math.cos;
+    const PI    = Math.PI;
+    const max   = Math.max;
+    const min   = Math.min;
+
+    let t = 0.0;
+    let delta_t = 0.01;
+    let zoom_t = 30.0;
+    let m_scale = 0.5;
+    let ambience = 0.0;
+    let incidentIllumination = 0.35;
+    let polish = 300.0;
+    let lampBrightness = 2.0;
+    let e_lean = PI/6;          // lean angle of "penny"
+    let e_rad = 5;              // radius of penny
+
+
+    const cameraPostion = {r:65, theta:PI, height:25, aimHeight:0};
+    const keyState = [];
+    // [http://keycode.info/ to get keycodes]
+    window.addEventListener('keydown',  function(e){keyState[e.key] = true;});
+    window.addEventListener('keyup',    function(e){keyState[e.key] = false;});
+
+    const updateCameraFromKeys = () => {
+        if (keyState.ArrowLeft) {cameraPostion.theta += 0.02;}
+        if (keyState.ArrowRight){cameraPostion.theta -= 0.02;}
+        if (keyState.ArrowUp)   {cameraPostion.height++;}
+        if (keyState.ArrowDown) {cameraPostion.height--;}
+        if (keyState.s)         {cameraPostion.r++;}
+        if (keyState.w)         {cameraPostion.r--;}
+        if (keyState.e)         {cameraPostion.aimHeight += 0.1;}
+        if (keyState.d)         {cameraPostion.aimHeight -= 0.1;}
+        if (keyState.r)         {ambience += 0.01;}
+        if (keyState.f)         {ambience = max(0,ambience - 0.01);}
+        if (keyState.t)         {incidentIllumination += 0.01;}
+        if (keyState.g)         {incidentIllumination = max(0,incidentIllumination - 0.01);}
+        if (keyState.y)         {polish *= 1.1;}
+        if (keyState.h)         {polish = max(1,polish /= 1.1);}
+        if (keyState.u)         {lampBrightness *= 1.1;}
+        if (keyState.j)         {lampBrightness = max(1,lampBrightness /= 1.1);}
+//        if (keyState.o)         {e_lean -= 0.01;}
+ //       if (keyState.p)         {e_lean += 0.01;}
+        if (keyState.p )         {delta_t = 0.0;} 
+        if (keyState.o )         {delta_t = 0.01;} 
+
+    };
+
+    function drawScene() {
+        t += delta_t;
+
+        if(delta_t >0.005) 
+            {    
+            if ((t%zoom_t) < 0.5*zoom_t) m_scale /= 1.01;
+            else m_scale *= 1.01;
+            cameraPostion.theta -= 0.002;
+            }            
+        updateCameraFromKeys();
+
+        e_height = e_rad *  cos(e_lean);    // centre height
+        e_orbit = 20.0 - e_rad * sin(e_lean);       // pitch circle rad
+        e_axis_x = e_orbit * Math.tan(e_lean);         // axis intersection below penny centre
+
+
+        uniform1f("mscale", m_scale);
+
+        uniform3fv("cameraPostion", [cameraPostion.r * Math.sin(cameraPostion.theta), cameraPostion.height, cameraPostion.r * Math.cos(cameraPostion.theta)]);
+        uniform3fv("cameraTo", [0, cameraPostion.aimHeight, 0]);
+        uniform1f("ambience", ambience);
+        uniform1f("incidentIllumination", incidentIllumination);
+        uniform1f("polish", polish);
+        uniform1f("lampBrightness", lampBrightness);
+        let rollingT = t*3;
+        uniform4fv("spherePos", [ // Although size is more of a permenent attribute, it's convenient to pass around as one var for collision detection
+ 
+            0,          6.0,           0,      1
+        ]);
+        uniform4fv("sphereOrientations", [
+
+         (10/3)*(rollingT+0*PI/3),               PI-(rollingT+0*PI/3),   0*PI/3 , 0
+        ]);
+
+        uniform3fv("ellipsoidCentres",      [
+    
+            e_orbit * cos(t+0*PI/3),     e_height,          e_orbit * sin(t+0*PI/3)
+//                10, 5, 10
+        ]);
+        uniform3fv("ellipsoidSizes",        [
+ 
+            .5 ,  1*e_rad,  1*e_rad
+        ]);
+
+//      To handle 3D rotation of the "ellipsoid axis" (around which the ellipsoid rolls)  
+//      orientation is now a vec4 representing a sequence of rotations from pointing along x
+//      seq is rot_x, rot_y, rot_z, rot_x2  (x,y,z,w)
+
+        th_x = 1*(20/5)*t;                          // rolling about local axis
+        th_y = t;                                   // spinning around global y  (also tranforms xz axes)
+        th_z = e_lean * Math.cos(th_y);             // leaning about global z axis (may also affect x lean)
+        th_zx2 = 0.0 //Math.atan((sin(th_y)*sin(th_z))*cos(th_y))
+        th_w = -e_lean * Math.sin(th_y)+th_zx2;     // leaning about global x axis account for cross talk
+
+
+
+        uniform4fv("ellipsoidOrientations", [
+
+        th_x, th_y,th_z, th_w
+
+        ]);
+
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+        window.requestAnimationFrame(drawScene);
+    }
+    drawScene();
+</script>
